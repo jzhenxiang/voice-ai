@@ -269,7 +269,7 @@ func (st *textAggregator) extractSentencesAtBoundaryLocked(contextID string) {
 		return
 	}
 
-	if complete := strings.TrimSpace(text[:lastBoundaryEnd]); complete != "" {
+	if complete := text[:lastBoundaryEnd]; complete != "" {
 		st.toEmitBuffer = append(st.toEmitBuffer, internal_type.SpeakTextPacket{
 			ContextID: contextID,
 			Text:      complete,
@@ -288,7 +288,7 @@ func (st *textAggregator) extractSentencesAtBoundaryLocked(contextID string) {
 // SpeakTextPacket and resets the buffer.
 // MUST be called with mu held.
 func (st *textAggregator) flushBufferLocked(contextID string) {
-	if remaining := strings.TrimSpace(st.buffer.String()); remaining != "" {
+	if remaining := st.buffer.String(); remaining != "" {
 		st.toEmitBuffer = append(st.toEmitBuffer, internal_type.SpeakTextPacket{
 			ContextID: contextID,
 			Text:      remaining,

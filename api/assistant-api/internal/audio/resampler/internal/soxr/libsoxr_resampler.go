@@ -8,6 +8,7 @@ package internal_resampler_soxr
 import (
 	"encoding/binary"
 	"fmt"
+	"sync"
 
 	internal_type "github.com/rapidaai/api/assistant-api/internal/type"
 	"github.com/rapidaai/pkg/commons"
@@ -16,20 +17,31 @@ import (
 	"github.com/zaf/g711"
 )
 
-// libsoxrResampler provides high-quality audio resampling
-// using pure-Go libsoxr-equivalent implementation
+// cachedEngine holds a stateful polyphase FIR resampler for one rate-pair.
+// The mutex serialises access so the filter's internal state is never
+// corrupted by concurrent callers and carries over between consecutive
+// audio chunks, eliminating per-chunk startup transients.
+type cachedEngine struct {
+	mu sync.Mutex
+	rs resampling.Resampler
+}
+
+// libsoxrResampler provides high-quality polyphase FIR audio resampling.
+// One engine is created per (srcRate/dstRate) pair and reused across calls
+// so the filter state is continuous for streaming audio.
 type libsoxrResampler struct {
-	logger commons.Logger
+	logger  commons.Logger
+	engines sync.Map // key "srcRate/dstRate" → *cachedEngine
 }
 
-// NewLibsoxrAudioResampler creates a new audio resampler
+// NewLibsoxrAudioResampler creates a new audio resampler.
 func NewLibsoxrAudioResampler(logger commons.Logger) internal_type.AudioResampler {
-	return &libsoxrResampler{
-		logger: logger,
-	}
+	return &libsoxrResampler{logger: logger}
 }
 
-// Resample converts audio data using high-quality resampling
+// Resample converts audio data using high-quality resampling.
+// The polyphase FIR engine is cached per rate-pair and reused across calls
+// so filter state is continuous — no per-chunk startup transients.
 func (r *libsoxrResampler) Resample(
 	data []byte,
 	source, target *protos.AudioConfig,
@@ -43,14 +55,14 @@ func (r *libsoxrResampler) Resample(
 		return []byte{}, nil
 	}
 
-	// No-op if identical
+	// No-op when all parameters already match.
 	if source.SampleRate == target.SampleRate &&
 		source.Channels == target.Channels &&
 		source.AudioFormat == target.AudioFormat {
 		return data, nil
 	}
 
-	// Convert input → LINEAR16
+	// Convert input to LINEAR16 so the FIR engine always works in PCM.
 	pcm := data
 	if source.AudioFormat != protos.AudioConfig_LINEAR16 {
 		var err error
@@ -60,26 +72,21 @@ func (r *libsoxrResampler) Resample(
 		}
 	}
 
-	// Resample sample rate
+	// Resample the sample rate while still mono / same channel count.
 	if source.SampleRate != target.SampleRate {
 		var err error
-		pcm, err = r.resamplePCM16(
-			pcm,
-			source.SampleRate,
-			target.SampleRate,
-			int(source.Channels),
-		)
+		pcm, err = r.resamplePCM16(pcm, source.SampleRate, target.SampleRate)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	// Convert channels
+	// Channel conversion after rate change (cheaper to convert fewer samples).
 	if source.Channels != target.Channels {
 		pcm = r.convertChannels(pcm, source.Channels, target.Channels)
 	}
 
-	// Convert to target format
+	// Convert to the target encoding if it differs from LINEAR16.
 	if target.AudioFormat != protos.AudioConfig_LINEAR16 {
 		var err error
 		pcm, err = r.convertFromLinear16(pcm, target)
@@ -92,50 +99,63 @@ func (r *libsoxrResampler) Resample(
 }
 
 // =======================
-// Resampling (Pure Go)
+// Resampling
 // =======================
-func (r *libsoxrResampler) resamplePCM16(
-	pcm []byte,
-	srcRate, dstRate uint32,
-	channels int,
-) ([]byte, error) {
 
-	// PCM16 → float64
-	floatIn := pcm16ToFloat64(pcm)
-
-	cfg := &resampling.Config{
-		InputRate:      float64(srcRate),
-		OutputRate:     float64(dstRate),
-		Channels:       channels,
-		EnableParallel: channels > 1,
-		Quality: resampling.QualitySpec{
-			Preset: resampling.QualityHigh,
-		},
-	}
-
-	rs, err := resampling.New(cfg)
+// resamplePCM16 resamples mono LINEAR16 PCM using a cached polyphase FIR engine.
+// No Flush() is called between chunks: the filter state carries over so
+// consecutive chunks from a streaming TTS source produce seamless output.
+func (r *libsoxrResampler) resamplePCM16(pcm []byte, srcRate, dstRate uint32) ([]byte, error) {
+	eng, err := r.getOrCreateEngine(srcRate, dstRate)
 	if err != nil {
-		return nil, fmt.Errorf("resampler init failed: %w", err)
+		return nil, err
 	}
 
-	out, err := rs.Process(floatIn)
+	eng.mu.Lock()
+	defer eng.mu.Unlock()
+
+	out, err := eng.rs.Process(pcm16ToFloat64(pcm))
 	if err != nil {
 		return nil, fmt.Errorf("resample failed: %w", err)
 	}
 
-	tail, err := rs.Flush()
-	if err != nil {
-		return nil, fmt.Errorf("flush failed: %w", err)
-	}
-
-	out = append(out, tail...)
-
 	return float64ToPCM16(out), nil
 }
 
+// getOrCreateEngine returns the cached engine for (srcRate, dstRate),
+// creating it on first access. LoadOrStore ensures only one engine is
+// created even under concurrent first-time calls for the same key.
+func (r *libsoxrResampler) getOrCreateEngine(srcRate, dstRate uint32) (*cachedEngine, error) {
+	key := fmt.Sprintf("%d/%d", srcRate, dstRate)
+
+	if v, ok := r.engines.Load(key); ok {
+		return v.(*cachedEngine), nil
+	}
+
+	rs, err := resampling.New(&resampling.Config{
+		InputRate:  float64(srcRate),
+		OutputRate: float64(dstRate),
+		Channels:   1, // Process() is mono-only; multi-channel needs ProcessMulti
+		EnableSIMD: true,
+		Quality:    resampling.QualitySpec{Preset: resampling.QualityHigh},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("resampler init failed: %w", err)
+	}
+
+	ce := &cachedEngine{rs: rs}
+	actual, _ := r.engines.LoadOrStore(key, ce)
+	return actual.(*cachedEngine), nil
+}
+
+// =======================
+// PCM16 ↔ float64
+// =======================
+
 func pcm16ToFloat64(data []byte) []float64 {
-	out := make([]float64, len(data)/2)
-	for i := 0; i < len(data); i += 2 {
+	n := len(data) &^ 1 // round down to even byte boundary
+	out := make([]float64, n/2)
+	for i := 0; i < n; i += 2 {
 		s := int16(binary.LittleEndian.Uint16(data[i : i+2]))
 		out[i/2] = float64(s) / 32768.0
 	}
@@ -160,64 +180,38 @@ func float64ToPCM16(data []float64) []byte {
 // Format Conversion
 // =======================
 
-func (r *libsoxrResampler) convertToLinear16(
-	data []byte,
-	cfg *protos.AudioConfig,
-) ([]byte, error) {
-
+func (r *libsoxrResampler) convertToLinear16(data []byte, cfg *protos.AudioConfig) ([]byte, error) {
 	switch cfg.AudioFormat {
 	case protos.AudioConfig_LINEAR16:
 		return data, nil
 	case protos.AudioConfig_MuLaw8:
-		return r.muLawToLinear16(data), nil
+		return g711.DecodeUlaw(data), nil
 	default:
 		return nil, fmt.Errorf("unsupported input format: %v", cfg.AudioFormat)
 	}
 }
 
-func (r *libsoxrResampler) convertFromLinear16(
-	data []byte,
-	cfg *protos.AudioConfig,
-) ([]byte, error) {
-
+func (r *libsoxrResampler) convertFromLinear16(data []byte, cfg *protos.AudioConfig) ([]byte, error) {
 	switch cfg.AudioFormat {
 	case protos.AudioConfig_LINEAR16:
 		return data, nil
 	case protos.AudioConfig_MuLaw8:
-		return r.linear16ToMuLaw(data), nil
+		return g711.EncodeUlaw(data), nil
 	default:
 		return nil, fmt.Errorf("unsupported output format: %v", cfg.AudioFormat)
 	}
 }
 
 // =======================
-// μ-law
-// =======================
-
-// mu-law (8-bit) → linear PCM16 (little-endian)
-func (r *libsoxrResampler) muLawToLinear16(data []byte) []byte {
-	return g711.DecodeUlaw(data) // returns int16
-}
-
-// linear PCM16 (little-endian) → mu-law (8-bit)
-func (r *libsoxrResampler) linear16ToMuLaw(data []byte) []byte {
-	return g711.EncodeUlaw(data)
-}
-
-// =======================
 // Channel Conversion
 // =======================
 
-func (r *libsoxrResampler) convertChannels(
-	data []byte,
-	src, dst uint32,
-) []byte {
-
+func (r *libsoxrResampler) convertChannels(data []byte, src, dst uint32) []byte {
 	if src == dst {
 		return data
 	}
 
-	// Mono → Stereo
+	// Mono → Stereo: duplicate each sample into both channels.
 	if src == 1 && dst == 2 {
 		out := make([]byte, len(data)*2)
 		for i := 0; i < len(data); i += 2 {
@@ -227,7 +221,7 @@ func (r *libsoxrResampler) convertChannels(
 		return out
 	}
 
-	// Stereo → Mono
+	// Stereo → Mono: average the two channels.
 	if src == 2 && dst == 1 {
 		out := make([]byte, len(data)/2)
 		for i := 0; i < len(data); i += 4 {

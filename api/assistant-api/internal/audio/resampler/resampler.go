@@ -7,13 +7,14 @@ package internal_audio_resampler
 
 import (
 	internal_resampler_default "github.com/rapidaai/api/assistant-api/internal/audio/resampler/internal/default"
+	internal_resampler_soxr "github.com/rapidaai/api/assistant-api/internal/audio/resampler/internal/soxr"
 	internal_type "github.com/rapidaai/api/assistant-api/internal/type"
 	"github.com/rapidaai/pkg/commons"
 )
 
-// logger, audioConfig, opts
+// GetResampler returns the high-quality soxr resampler for all audio rate conversion.
 func GetResampler(logger commons.Logger) (internal_type.AudioResampler, error) {
-	return internal_resampler_default.NewDefaultAudioResampler(logger), nil
+	return internal_resampler_soxr.NewLibsoxrAudioResampler(logger), nil
 }
 
 func GetConverter(logger commons.Logger) (internal_type.AudioConverter, error) {

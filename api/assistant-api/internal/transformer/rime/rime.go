@@ -48,7 +48,7 @@ func (co *rimeOption) GetTextToSpeechConnectionString() string {
 	params := url.Values{}
 	params.Add("audioFormat", "pcm")
 	params.Add("samplingRate", "16000")
-	params.Add("segment", "immediate")
+	params.Add("segment", "never")
 
 	voice := RIME_DEFAULT_VOICE
 	if voiceIDValue, err := co.mdlOpts.GetString("speak.voice.id"); err == nil && voiceIDValue != "" {
@@ -72,5 +72,5 @@ func (co *rimeOption) GetTextToSpeechConnectionString() string {
 		params.Add("speedAlpha", speedAlpha)
 	}
 
-	return fmt.Sprintf("wss://users-ws.rime.ai/ws2?%s", params.Encode())
+	return fmt.Sprintf("wss://users-ws.rime.ai/ws3?%s", params.Encode())
 }

@@ -190,8 +190,7 @@ func (t *rimeTTS) Transform(ctx context.Context, in internal_type.LLMPacket) err
 		}
 		t.mu.Unlock()
 		if err := cnn.WriteJSON(map[string]interface{}{
-			"text":      input.Text,
-			"contextId": currentCtx,
+			"text": input.Text,
 		}); err != nil {
 			t.logger.Errorf("rime-tts: unable to write json for text to speech: %v", err)
 		}
