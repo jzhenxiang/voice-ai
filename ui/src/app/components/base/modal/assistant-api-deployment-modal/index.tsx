@@ -9,7 +9,8 @@ import { RightSideModal } from '@/app/components/base/modal/right-side-modal';
 import { CopyButton } from '@/app/components/form/button/copy-button';
 import { YellowNoticeBlock } from '@/app/components/container/message/notice-block';
 import { ProviderPill } from '@/app/components/pill/provider-model-pill';
-import { FC, ReactNode } from 'react';
+import { FC } from 'react';
+import { DeploymentRow, DeploymentSectionHeader } from '@/app/components/base/modal/deployment-modal-primitives';
 
 interface AssistantApiDeploymentDialogProps extends ModalProps {
   deployment: AssistantApiDeployment;
@@ -52,22 +53,8 @@ export function AssistantApiDeploymentDialog(
   );
 }
 
-const Row: FC<{ label: string; children: ReactNode }> = ({ label, children }) => (
-  <div className="flex items-center justify-between h-12 px-4 gap-4">
-    <span className="text-xs font-medium uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400 shrink-0">
-      {label}
-    </span>
-    <div className="flex items-center gap-2">{children}</div>
-  </div>
-);
-
-const SectionHeader: FC<{ label: string }> = ({ label }) => (
-  <div className="h-9 px-4 flex items-center bg-gray-50 dark:bg-gray-800/50">
-    <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-gray-400 dark:text-gray-500">
-      {label}
-    </span>
-  </div>
-);
+const Row = DeploymentRow;
+const SectionHeader = DeploymentSectionHeader;
 
 const VoiceInput: FC<{ deployment?: DeploymentAudioProvider }> = ({
   deployment,

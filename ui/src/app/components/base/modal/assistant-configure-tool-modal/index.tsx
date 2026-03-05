@@ -142,13 +142,12 @@ export const ConfigureAssistantToolDialog: FC<
       return false;
     }
 
-    if (
-      !ValidateToolDefaultOptions(
-        buildinToolConfig.code,
-        buildinToolConfig.parameters,
-      )
-    ) {
-      setErrorMessage('Please provide valid options for action.');
+    const toolOptionsError = ValidateToolDefaultOptions(
+      buildinToolConfig.code,
+      buildinToolConfig.parameters,
+    );
+    if (toolOptionsError) {
+      setErrorMessage(toolOptionsError);
       return false;
     }
 

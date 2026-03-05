@@ -61,13 +61,16 @@ const AdvancedPromptInput: FC<PromptEditorProps> = ({
       <div
         ref={ref}
         className={cn(
-          'outline-solid outline-[1.5px] outline-transparent outline-offset-[-1.5px]',
-          'focus-within:outline-primary focus-within:border-primary',
           'border-b border-gray-300 dark:border-gray-700',
           'transition-colors duration-100',
           'relative',
           'bg-light-background dark:bg-gray-950',
-          isFocus && 'border-primary! outline-primary!',
+          isFocus && 'border-primary',
+          // ::after overlay — renders above children so focus ring is fully visible
+          'after:content-[""] after:absolute after:inset-0 after:pointer-events-none after:z-[1]',
+          'after:outline-solid after:outline-[1.5px] after:outline-transparent after:outline-offset-[-1.5px]',
+          'focus-within:after:outline-primary',
+          isFocus && 'after:outline-primary!',
           isExpand ? 'h-full z-50' : '',
           className,
         )}

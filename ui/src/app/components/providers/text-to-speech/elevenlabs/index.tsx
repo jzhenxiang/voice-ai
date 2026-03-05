@@ -9,8 +9,7 @@ import {
 } from '@/providers';
 import { CustomValueDropdown } from '@/app/components/dropdown/custom-value-dropdown';
 import { Dropdown } from '@/app/components/dropdown';
-import { ILinkBorderButton } from '@/app/components/form/button';
-import { ExternalLink } from 'lucide-react';
+import { VoiceBrowseLink } from '@/app/components/providers/text-to-speech/voice-browse-link';
 export {
   GetElevanLabDefaultOptions,
   ValidateElevanLabOptions,
@@ -115,13 +114,7 @@ export const ConfigureElevanLabTextToSpeech: React.FC<{
             option={renderOption}
             label={renderOption}
           />
-          <ILinkBorderButton
-            target="_blank"
-            href={`/integration/models/elevenlabs?query=${getParamValue('speak.voice.id')}`}
-            className="h-10 text-sm p-2 px-3 bg-light-background max-w-full dark:bg-gray-950 border-b"
-          >
-            <ExternalLink className="w-4 h-4" strokeWidth={1.5} />
-          </ILinkBorderButton>
+          <VoiceBrowseLink href={`/integration/models/elevenlabs?query=${getParamValue('speak.voice.id')}`} />
         </div>
       </FieldSet>
 

@@ -206,16 +206,15 @@ const ConfigureAssistantAnalysis: FC<{ assistantId: string }> = ({
             ))}
           </ScrollableResizableTable>
         ) : (
-          <div className="flex flex-1 w-full justify-center items-center">
-            <ActionableEmptyMessage
-              title="No Analysis"
-              subtitle="There are no assistant analysis."
-              action="Create new analysis"
-              onActionClick={() =>
-                navigation.goToCreateAssistantAnalysis(assistantId)
-              }
-            />
-          </div>
+          <ActionableEmptyMessage
+            centered
+            title="No Analysis"
+            subtitle="There are no assistant analysis."
+            action="Create new analysis"
+            onActionClick={() =>
+              navigation.goToCreateAssistantAnalysis(assistantId)
+            }
+          />
         )}
       </TableSection>
     </div>

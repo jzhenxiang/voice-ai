@@ -8,8 +8,7 @@ import {
   AZURE_TEXT_TO_SPEECH_VOICE,
 } from '@/providers';
 import { useState } from 'react';
-import { ILinkBorderButton } from '@/app/components/form/button';
-import { ExternalLink } from 'lucide-react';
+import { VoiceBrowseLink } from '@/app/components/providers/text-to-speech/voice-browse-link';
 
 export { GetAzureDefaultOptions, ValidateAzureOptions } from './constant';
 const renderVoiceOption = (c: { icon: React.ReactNode; shortName: string }) => (
@@ -107,13 +106,7 @@ export const ConfigureAzureTextToSpeech: React.FC<{
               updateParameter('speak.voice.id', vl);
             }}
           />
-          <ILinkBorderButton
-            target="_blank"
-            href={`/integration/models/azure-speech-service?query=${getParamValue('speak.voice.id')}`}
-            className="h-10 text-sm p-2 px-3 bg-light-background max-w-full dark:bg-gray-950 border-b"
-          >
-            <ExternalLink className="w-4 h-4" strokeWidth={1.5} />
-          </ILinkBorderButton>
+          <VoiceBrowseLink href={`/integration/models/azure-speech-service?query=${getParamValue('speak.voice.id')}`} />
         </div>
       </FieldSet>
 

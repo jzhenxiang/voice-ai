@@ -36,7 +36,8 @@ import {
   CardDescription,
   CardTitle,
 } from '@/app/components/base/cards';
-import { ArrowUpRight, Plus, SquareFunction } from 'lucide-react';
+import { ArrowUpRight, Plus } from 'lucide-react';
+import { BUILDIN_TOOLS } from '@/llm-tools';
 import { PageHeaderBlock } from '@/app/components/blocks/page-header-block';
 import { PageTitleBlock } from '@/app/components/blocks/page-title-block';
 import { ActionableEmptyMessage } from '@/app/components/container/message/actionable-empty-message';
@@ -526,52 +527,94 @@ export function CreateAssistantPage() {
                 </DocNoticeBlock>
                 <div className="overflow-auto flex flex-col flex-1">
                   {tools.length > 0 ? (
-                    <section className="grid content-start grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-px bg-gray-200 dark:bg-gray-800 grow shrink-0 m-4">
+                    <section className="grid content-start grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[2px] grow shrink-0 m-4">
                       {tools.map((itm, idx) => {
                         const isMCP = itm.buildinToolConfig.code === 'mcp';
+                        const toolMeta = BUILDIN_TOOLS.find(
+                          x => x.code === itm.buildinToolConfig.code,
+                        );
 
                         return (
-                          <BaseCard key={idx} className="p-4 md:p-5 col-span-1">
-                            <header className="flex justify-between items-start">
-                              <div className="flex items-center gap-2">
-                                <SquareFunction
-                                  className="w-7 h-7"
-                                  strokeWidth={1.5}
+                          <BaseCard
+                            key={idx}
+                            className="flex flex-col bg-light-background col-span-1"
+                          >
+                            {/* Body */}
+                            <div className="p-4 flex-1 flex flex-col gap-3">
+                              {/* Header: icon + options menu */}
+                              <header className="flex items-start justify-between">
+                                <div className="w-9 h-9 flex items-center justify-center bg-gray-100 dark:bg-gray-800/60 shrink-0">
+                                  {toolMeta?.icon ? (
+                                    <img
+                                      alt={toolMeta.name}
+                                      src={toolMeta.icon}
+                                      className="w-5 h-5 object-contain"
+                                    />
+                                  ) : (
+                                    <span className="text-xs font-semibold text-gray-400 uppercase">
+                                      {(itm.name ?? '?').charAt(0)}
+                                    </span>
+                                  )}
+                                </div>
+                                <CardOptionMenu
+                                  options={[
+                                    {
+                                      option: 'Edit tool',
+                                      onActionClick: () => {
+                                        setEditingTool(itm);
+                                        setConfigureToolOpen(true);
+                                      },
+                                    },
+                                    {
+                                      option: (
+                                        <span className="text-rose-600">
+                                          Delete tool
+                                        </span>
+                                      ),
+                                      onActionClick: () => {
+                                        setTools(prevTools =>
+                                          prevTools.filter(
+                                            tool => tool !== itm,
+                                          ),
+                                        );
+                                      },
+                                    },
+                                  ]}
+                                  classNames="h-8 w-8 p-1"
                                 />
-                                {isMCP && (
-                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 font-medium">
-                                    MCP
-                                  </span>
-                                )}
+                              </header>
+
+                              {/* Name + description */}
+                              <div className="flex-1 flex flex-col gap-1 min-w-0">
+                                <CardTitle className="line-clamp-1 text-sm font-semibold">
+                                  {itm.name}
+                                </CardTitle>
+                                <CardDescription className="line-clamp-2 text-xs leading-relaxed">
+                                  {itm.description}
+                                </CardDescription>
                               </div>
-                              <CardOptionMenu
-                                options={[
-                                  {
-                                    option: (
-                                      <span className="text-red-600">
-                                        Delete tool
-                                      </span>
-                                    ),
-                                    onActionClick: () => {
-                                      setTools(prevTools =>
-                                        prevTools.filter(tool => tool !== itm),
-                                      );
-                                    },
-                                  },
-                                  {
-                                    option: 'Edit tool',
-                                    onActionClick: () => {
-                                      setEditingTool(itm);
-                                      setConfigureToolOpen(true);
-                                    },
-                                  },
-                                ]}
-                                classNames="h-8 w-8 p-1 opacity-60"
-                              />
-                            </header>
-                            <div className="flex-1 mt-3">
-                              <CardTitle>{itm.name}</CardTitle>
-                              <CardDescription>{itm.description}</CardDescription>
+                            </div>
+
+                            {/* Footer: execution type tag */}
+                            <div className="flex items-center gap-1.5 px-4 py-2.5 border-t border-gray-100 dark:border-gray-800">
+                              {toolMeta && (
+                                <span className="inline-flex items-center h-5 px-2 text-[11px] font-medium tracking-wide bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                                  {toolMeta.name}
+                                </span>
+                              )}
+                              {isMCP && (
+                                <span className="inline-flex items-center h-5 px-2 text-[11px] font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                                  MCP
+                                </span>
+                              )}
+                              {!toolMeta && !isMCP && (
+                                <span className="inline-flex items-center h-5 px-2 text-[11px] font-medium bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-500 capitalize">
+                                  {itm.buildinToolConfig.code.replace(
+                                    /_/g,
+                                    ' ',
+                                  )}
+                                </span>
+                              )}
                             </div>
                           </BaseCard>
                         );

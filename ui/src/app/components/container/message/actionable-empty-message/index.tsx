@@ -7,8 +7,10 @@ export const ActionableEmptyMessage: FC<{
   action?: string;
   actionComponent?: any;
   onActionClick?: () => void;
-}> = ({ title, subtitle, action, actionComponent, onActionClick }) => {
-  return (
+  /** Wrap in a flex-1 full-width centering container */
+  centered?: boolean;
+}> = ({ title, subtitle, action, actionComponent, onActionClick, centered }) => {
+  const content = (
     <div className="px-4 py-6 flex flex-col justify-center items-center">
       <div className="font-semibold">{title}</div>
       <div>{subtitle}</div>
@@ -23,4 +25,12 @@ export const ActionableEmptyMessage: FC<{
       )}
     </div>
   );
+  if (centered) {
+    return (
+      <div className="flex flex-1 w-full justify-center items-center">
+        {content}
+      </div>
+    );
+  }
+  return content;
 };

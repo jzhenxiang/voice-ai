@@ -217,16 +217,15 @@ const ConfigureAssistantWebhook: FC<{ assistantId: string }> = ({
             ))}
           </ScrollableResizableTable>
         ) : (
-          <div className="flex flex-1 w-full justify-center items-center">
-            <ActionableEmptyMessage
-              title="No Webhook"
-              subtitle="There are no assistant webhook found."
-              action="Create new webhook"
-              onActionClick={() =>
-                navigation.goToCreateAssistantWebhook(assistantId)
-              }
-            />
-          </div>
+          <ActionableEmptyMessage
+            centered
+            title="No Webhook"
+            subtitle="There are no assistant webhook found."
+            action="Create new webhook"
+            onActionClick={() =>
+              navigation.goToCreateAssistantWebhook(assistantId)
+            }
+          />
         )}
       </TableSection>
     </div>

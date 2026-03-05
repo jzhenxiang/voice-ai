@@ -66,15 +66,16 @@ export const EndpointDropdown: FC<EndpointDropdownProps> = props => {
       <FormLabel>Endpoint</FormLabel>
       <div
         className={cn(
-          'outline-solid outline-transparent',
-          'focus-within:outline-blue-600 focus:outline-blue-600',
-          'border-b border-gray-300 dark:border-gray-700',
-          'focus-within:border-transparent!',
-          'transition-all duration-200 ease-in-out',
           'flex relative',
           'bg-light-background dark:bg-gray-950',
-          'pt-px pl-px',
-          'divide-x',
+          'border-b border-gray-300 dark:border-gray-700',
+          'focus-within:border-primary',
+          'transition-colors duration-100',
+          'divide-x divide-gray-200 dark:divide-gray-700',
+          // ::after overlay — renders above children so focus ring is fully visible
+          'after:content-[""] after:absolute after:inset-0 after:pointer-events-none after:z-[1] after:border-0!',
+          'after:outline-solid after:outline-[1.5px] after:outline-transparent after:outline-offset-[-1.5px]',
+          'focus-within:after:outline-primary',
           props.className,
         )}
       >

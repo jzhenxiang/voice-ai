@@ -9,10 +9,9 @@ import {
   CARTESIA_SPEED_OPTION,
   CARTESIA_VOICE,
 } from '@/providers';
-import { ILinkBorderButton } from '@/app/components/form/button';
+import { VoiceBrowseLink } from '@/app/components/providers/text-to-speech/voice-browse-link';
 import { useState } from 'react';
 import { CustomValueDropdown } from '@/app/components/dropdown/custom-value-dropdown';
-import { ExternalLink } from 'lucide-react';
 export { GetCartesiaDefaultOptions, ValidateCartesiaOptions } from './constant';
 
 const renderOption = c => (
@@ -112,13 +111,7 @@ export const ConfigureCartesiaTextToSpeech: React.FC<{
               filteredVoices.push({ id: vl, name: vl });
             }}
           />
-          <ILinkBorderButton
-            target="_blank"
-            href={`/integration/models/cartesia?query=${getParamValue('speak.voice.id')}`}
-            className="h-10 text-sm p-2 px-3 bg-light-background max-w-full dark:bg-gray-950 border-b"
-          >
-            <ExternalLink className="w-4 h-4" strokeWidth={1.5} />
-          </ILinkBorderButton>
+          <VoiceBrowseLink href={`/integration/models/cartesia?query=${getParamValue('speak.voice.id')}`} />
         </div>
       </FieldSet>
 

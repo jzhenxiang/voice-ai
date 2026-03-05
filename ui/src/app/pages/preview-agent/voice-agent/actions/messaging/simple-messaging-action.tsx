@@ -44,17 +44,13 @@ export const SimpleMessagingAction: FC<SimpleMessagingAcitonProps> = ({
   };
 
   return (
-    <div>
-      <form
-        className={cn(
-          'relative flex items-center gap-4 focus-within:border-primary  dark:border-gray-700 bg-light-background focus-within:bg-white',
-        )}
-        onSubmit={handleSubmit(onSubmitForm)}
-      >
+    <div className="bg-white dark:bg-gray-900">
+      <form className="flex flex-col" onSubmit={handleSubmit(onSubmitForm)}>
+        {/* Textarea — grows with content, no overlap with buttons */}
         <ScalableTextarea
           placeholder={placeholder}
-          wrapperClassName="bg-light-background p-0"
-          className="bg-light-background focus-within:bg-white"
+          wrapperClassName="bg-white dark:bg-gray-900 border-transparent! focus-within:outline-transparent! px-4 pt-3 pb-2"
+          className="bg-transparent"
           {...register('message', {
             required: 'Please write your message.',
           })}
@@ -66,60 +62,52 @@ export const SimpleMessagingAction: FC<SimpleMessagingAcitonProps> = ({
           }}
         />
 
-        <div className="absolute rounded-b-lg right-2 bottom-2 my-auto w-fit">
-          <div className="flex flex-row border divide-x">
+        {/* Action row — always below textarea, right-aligned */}
+        <div className="flex items-center justify-end px-3 pb-3 pt-1 border-t border-gray-100 dark:border-gray-800">
+          <div className="flex items-stretch border border-gray-200 dark:border-gray-700 divide-x divide-gray-200 dark:divide-gray-700">
             {isValid ? (
               <button
-                aria-label="Starting Voice"
                 type="submit"
-                className="group h-9 px-3 flex flex-row items-center justify-center transition-all duration-300 hover:opacity-80 overflow-hidden w-fit bg-blue-600 dark:bg-blue-500 text-white"
+                className="h-9 px-4 flex items-center gap-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 transition-colors"
               >
-                <Send className="w-4.5 h-4.5 flex-shrink-0" strokeWidth={1.5} />
-                <span className="text-sm overflow-hidden ml-2 font-medium">
-                  Send
-                </span>
+                <Send className="w-4 h-4 flex-shrink-0" strokeWidth={1.5} />
+                Send
               </button>
             ) : (
               <button
-                aria-label="Starting Voice"
                 type="button"
                 disabled={isConnecting}
                 onClick={async () => {
                   await handleVoiceToggle();
                   !isConnected && (await handleConnectAgent());
                 }}
-                className="group h-9 px-3 flex flex-row items-center justify-center transition-all duration-300 hover:opacity-80 overflow-hidden w-fit bg-blue-600 dark:bg-blue-500 text-white"
+                className="h-9 px-4 flex items-center gap-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 disabled:opacity-60 transition-colors"
               >
                 {isConnecting ? (
                   <Loader2
-                    className="w-4.5 h-4.5 flex-shrink-0 animate-spin"
+                    className="w-4 h-4 flex-shrink-0 animate-spin"
                     strokeWidth={1.5}
                   />
                 ) : (
                   <AudioLines
-                    className="w-4.5 h-4.5 flex-shrink-0"
+                    className="w-4 h-4 flex-shrink-0"
                     strokeWidth={1.5}
                   />
                 )}
-                <span className="text-sm overflow-hidden ml-2 font-medium">
-                  {isConnecting ? 'Connecting...' : 'Voice'}
-                </span>
+                {isConnecting ? 'Connecting...' : 'Voice'}
               </button>
             )}
             {(isConnected || isConnecting) && (
               <button
-                aria-label="Stoping Voice"
                 type="button"
                 disabled={!isConnected && !isConnecting}
                 onClick={async () => {
                   await handleDisconnectAgent();
                 }}
-                className="group h-9 px-3 flex flex-row items-center justify-center transition-all duration-300 hover:opacity-80 overflow-hidden w-fit bg-red-500 text-white"
+                className="h-9 px-4 flex items-center gap-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-60 transition-colors"
               >
-                <StopCircleIcon className="w-4 h-4 !border-white" />
-                <span className="max-w-0 group-hover:max-w-xs transition-all duration-200 origin-left scale-x-0 group-hover:scale-x-100 group-hover:opacity-100 opacity-0 whitespace-nowrap text-sm overflow-hidden group-hover:ml-2 font-medium">
-                  Stop
-                </span>
+                <StopCircleIcon className="w-4 h-4 flex-shrink-0" strokeWidth={1.5} />
+                Stop
               </button>
             )}
           </div>

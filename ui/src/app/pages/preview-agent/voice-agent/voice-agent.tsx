@@ -348,17 +348,17 @@ export const VoiceAgent: FC<{
             </YellowNoticeBlock>
           )}
           {/* Tab bar */}
-          <div className="flex items-center border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950">
+          <div className="flex items-center border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
             {(['messages', 'events'] as MsgTab[]).map(t => (
               <button
                 key={t}
                 type="button"
                 onClick={() => setMsgTab(t)}
                 className={cn(
-                  'px-4 py-2.5 text-sm/6 font-medium border-b-2 transition-colors',
+                  'relative flex items-center h-10 px-4 text-xs font-medium uppercase tracking-[0.08em] whitespace-nowrap transition-colors',
                   msgTab === t
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200',
+                    ? 'text-gray-900 dark:text-gray-100 after:absolute after:bottom-0 after:inset-x-0 after:h-0.5 after:bg-primary'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100',
                 )}
               >
                 {t === 'events' && events.length > 0
@@ -467,17 +467,17 @@ export const VoiceAgentDebugger: FC<{
     return (
       <div className="flex flex-col h-full overflow-hidden text-sm">
         {/* Tab bar */}
-        <div className="shrink-0 flex items-center border-b border-gray-200 dark:border-gray-700">
+        <div className="shrink-0 flex items-center border-b border-gray-200 dark:border-gray-800">
           {(['configuration', 'arguments', 'metrics'] as RightTab[]).map(t => (
             <button
               key={t}
               type="button"
               onClick={() => setTab(t)}
               className={cn(
-                'px-3 py-2.5 text-sm/6 font-medium border-b-2 transition-colors',
+                'relative flex items-center h-10 px-4 text-xs font-medium uppercase tracking-[0.08em] whitespace-nowrap transition-colors',
                 tab === t
-                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200',
+                  ? 'text-gray-900 dark:text-gray-100 after:absolute after:bottom-0 after:inset-x-0 after:h-0.5 after:bg-primary'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100',
               )}
             >
               {t}
