@@ -1,0 +1,37 @@
+{
+    "connection": {
+        "assistant": "https://assistant.rapida.DOMAIN_PLACEHOLDER",
+        "web": "https://api.rapida.DOMAIN_PLACEHOLDER",
+        "endpoint": "https://api.rapida.DOMAIN_PLACEHOLDER",
+        "media": "https://websocket.rapida.DOMAIN_PLACEHOLDER",
+        "socket": "socket.rapida.DOMAIN_PLACEHOLDER:4573",
+        "sip": "sip.rapida.DOMAIN_PLACEHOLDER:5090"
+    },
+    "workspace": {
+        "domain": "DOMAIN_PLACEHOLDER",
+        "title": "Rapida AI",
+        "authentication": {
+            "signIn": {
+                "providers": {
+                    "password": true,
+                    "google": false,
+                    "linkedin": false,
+                    "github": false
+                }
+            },
+            "signUp": {
+                "enable": true,
+                "providers": {
+                    "password": true,
+                    "google": false,
+                    "linkedin": false,
+                    "github": false
+                }
+            }
+        },
+        "features": {
+            "knowledge": false,
+            "telemetry": false
+        }
+    }
+}

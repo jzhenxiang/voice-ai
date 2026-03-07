@@ -82,8 +82,11 @@ services:
 
   # Override ui to mount the knowledge-enabled config
   ui:
-    volumes:
-      - ./docker/ui/config.development.knowledge.json:/app/src/configs/config.development.json:ro
+    build:
+      context: .
+      dockerfile: docker/ui/Dockerfile
+      args:
+        EDITION: enterprise
     depends_on:
       - document-api
 
