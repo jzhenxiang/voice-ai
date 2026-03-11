@@ -131,6 +131,7 @@ export function Version(props: VersionProps) {
                       </IBlueBorderButton>
                     ) : (
                       <RevisionIndicator
+                        size="small"
                         status={
                           assistantProviderAction.assistant?.getAssistantproviderid() ===
                           apm.getAssistantprovidermodel()?.getId()
@@ -191,6 +192,7 @@ export function Version(props: VersionProps) {
                       </IBlueBorderButton>
                     ) : (
                       <RevisionIndicator
+                        size="small"
                         status={
                           assistantProviderAction.assistant?.getAssistantproviderid() ===
                           apm.getAssistantprovideragentkit()?.getId()
@@ -253,6 +255,7 @@ export function Version(props: VersionProps) {
                       </IBlueBorderButton>
                     ) : (
                       <RevisionIndicator
+                        size="small"
                         status={
                           assistantProviderAction.assistant?.getAssistantproviderid() ===
                           apm.getAssistantproviderwebsocket()?.getId()

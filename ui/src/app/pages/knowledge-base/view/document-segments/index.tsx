@@ -1,6 +1,7 @@
 import { KnowledgeDocumentSegment } from '@rapidaai/react';
 import { TablePagination } from '@/app/components/base/tables/table-pagination';
 import { BluredWrapper } from '@/app/components/wrapper/blured-wrapper';
+import { BaseCard } from '@/app/components/base/cards';
 import { useRapidaStore } from '@/hooks';
 import { useKnowledgeDocumentSegmentPageStore } from '@/hooks/use-knowledge-document-segment-page-store';
 import { cn } from '@/utils';
@@ -81,12 +82,12 @@ export const DocumentSegments: FC<{
             />
           </BluredWrapper>
 
-          <div className="grid content-start grid-cols-1 gap-px sm:grid-cols-2 md:grid-cols-3 grow shrink-0 px-4 py-4 bg-gray-200 dark:bg-gray-800">
+          <div className="grid content-start grid-cols-1 sm:grid-cols-2 md:grid-cols-3 grow shrink-0 m-4">
             {knowledgeDocumentActions.knowledgeDocumentSegments.map(
               (segment, index) => (
-                <div
+                <BaseCard
                   key={index}
-                  className="flex flex-col h-full p-6 gap-6 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors duration-100"
+                  className="p-6 gap-6"
                 >
                   {/* Segment header */}
                   <div className="flex items-center justify-between">
@@ -141,7 +142,7 @@ export const DocumentSegments: FC<{
                       )}
                     </div>
                   )}
-                </div>
+                </BaseCard>
               ),
             )}
           </div>

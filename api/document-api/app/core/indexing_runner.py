@@ -35,6 +35,7 @@ from app.models.knowledge_model import (
 )
 from app.services.knowledge_service import KnowledgeService
 from app.storage.storage import Storage
+from app.utils.general import count_string_word
 
 _log = logging.getLogger("app.core.indexing_runner")
 
@@ -162,7 +163,10 @@ class IndexingRunner:
             after_indexing_status="splitting",
             extra_update_params={
                 KnowledgeDocument.word_count: sum(
-                    [len(text_doc.page_content) for text_doc in text_docs]
+                    count_string_word(text_doc.page_content) for text_doc in text_docs
+                ),
+                KnowledgeDocument.document_size: sum(
+                    len(text_doc.page_content.encode("utf-8")) for text_doc in text_docs
                 ),
                 KnowledgeDocument.parsing_completed_at: datetime.datetime.now(
                     datetime.timezone.utc

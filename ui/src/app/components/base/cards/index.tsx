@@ -16,7 +16,7 @@ export const BaseCard: FC<HTMLAttributes<HTMLDivElement>> = ({
 }) => (
   <div
     className={cn(
-      'bg-white dark:bg-gray-950/50 relative group flex flex-col transition-colors duration-100',
+      'bg-white dark:bg-gray-950/50 border border-gray-200 dark:border-gray-800 relative group flex flex-col transition-colors duration-100',
       className,
     )}
     {...props}
@@ -35,7 +35,7 @@ export const LinkCard: FC<{
   <Link
     to={to}
     className={cn(
-      'bg-white dark:bg-gray-950/50 relative group flex flex-col transition-colors duration-100',
+      'bg-white dark:bg-gray-950/50 border border-gray-200 dark:border-gray-800 relative group flex flex-col transition-colors duration-100',
       className,
     )}
   >
@@ -65,7 +65,7 @@ export const ActionCard: FC<HTMLAttributes<HTMLDivElement>> = ({
       onClick={onClick}
       onKeyDown={handleKeyDown}
       className={cn(
-        'bg-white dark:bg-gray-950/50 relative group flex flex-col transition-colors duration-100 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary',
+        'bg-white dark:bg-gray-950/50 border border-gray-200 dark:border-gray-800 relative group flex flex-col transition-colors duration-100 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary',
         className,
       )}
       {...props}
@@ -84,11 +84,12 @@ export const Card: FC<CardProps> = ({ children, className, ...props }) => {
     <div
       className={cn(
         // Carbon tile — no border radius, 1px border
-        'dark:bg-gray-950 bg-white relative flex flex-col overflow-hidden p-4 h-fit border rounded-none',
+        'dark:bg-gray-950 bg-white relative group flex flex-col overflow-hidden p-4 h-fit border rounded-none',
         className,
       )}
       {...props}
     >
+      <CornerBorderOverlay />
       {children}
     </div>
   );

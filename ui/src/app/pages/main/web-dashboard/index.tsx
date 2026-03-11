@@ -124,15 +124,13 @@ export const HomePage = () => {
         <div
           className={cn(
             'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
-            'gap-px bg-gray-200 dark:bg-gray-700',
-            'border border-gray-200 dark:border-gray-700',
           )}
         >
           {coreFeatures.map((feature, index) => (
             <ClickableCard
               to={feature.route}
               key={index}
-              className="p-5 border-0 rounded-none bg-white dark:bg-gray-900 h-full"
+              className="p-5 rounded-none bg-white dark:bg-gray-900 h-full"
             >
               <div className="flex flex-col gap-4 h-full">
                 {/* Icon */}

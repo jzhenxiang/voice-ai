@@ -435,10 +435,11 @@ const ConfigureAssistantDebuggerDeployment: FC<{ assistantId: string }> = ({
                   Cancel
                 </ICancelButton>,
                 <ISecondaryButton
-                  className="w-full h-full bg-gray-800"
+                  className="w-full h-full"
+                  isLoading={loading}
                   onClick={() => handleDeployDebugger(false)}
                 >
-                  Skip
+                  Deploy without voice output
                 </ISecondaryButton>,
                 <IBlueBGArrowButton
                   type="button"
@@ -446,7 +447,7 @@ const ConfigureAssistantDebuggerDeployment: FC<{ assistantId: string }> = ({
                   isLoading={loading}
                   onClick={() => handleDeployDebugger(true)}
                 >
-                  Deploy Debugger
+                  Deploy with voice output
                 </IBlueBGArrowButton>,
               ],
             },

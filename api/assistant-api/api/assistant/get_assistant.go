@@ -46,7 +46,6 @@ func (assistantApi *assistantGrpcApi) GetAssistant(ctx context.Context, cepm *as
 		assistantApi.logger.Errorf("unable to cast assistant %v", err)
 	}
 
-	assistantApi.logger.Infof("assistant %s fetched successfully for project %+v", out.GetId(), ep)
 	return &assistant_api.GetAssistantResponse{
 		Data:    out,
 		Success: true,
