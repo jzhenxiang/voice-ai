@@ -107,7 +107,10 @@ const ConfigureAssistantDebuggerDeployment: FC<{ assistantId: string }> = ({
     parameters: Metadata[];
   }>({
     provider: 'cartesia',
-    parameters: GetDefaultSpeechToTextIfInvalid('cartesia', []),
+    parameters: GetDefaultTextToSpeechIfInvalid(
+      'cartesia',
+      GetDefaultSpeakerConfig(),
+    ),
   });
 
   const { showDialog, ConfirmDialogComponent } = useConfirmDialog({});

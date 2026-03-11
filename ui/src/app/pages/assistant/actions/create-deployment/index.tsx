@@ -268,10 +268,17 @@ export const ConfigureAssistantDeploymentPage = () => {
       </PageHeaderBlock>
 
       {hasAnyDeployment ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 content-start gap-4 m-4">
+        <div
+          className={cn(
+            'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 content-start',
+            'gap-px bg-gray-200 dark:bg-gray-800',
+            'border border-gray-200 dark:border-gray-800',
+            'm-4',
+          )}
+        >
           {/* Debugger */}
           {assistant?.hasDebuggerdeployment() && (
-            <BaseCard className="col-span-1 border">
+            <BaseCard className="border-0 rounded-none bg-white dark:bg-gray-900">
               <div className="flex-1 p-4 md:p-5 space-y-4">
                 {/* Header */}
                 <div className="flex items-start justify-between">
@@ -330,7 +337,7 @@ export const ConfigureAssistantDeploymentPage = () => {
 
           {/* SDK / API */}
           {assistant?.hasApideployment() && (
-            <BaseCard className="col-span-1 border">
+            <BaseCard className="border-0 rounded-none bg-white dark:bg-gray-900">
               <div className="flex-1 p-4 md:p-5 space-y-4">
                 <div className="flex items-start justify-between">
                   <Code
@@ -402,7 +409,7 @@ export const ConfigureAssistantDeploymentPage = () => {
 
           {/* Phone Call */}
           {assistant?.hasPhonedeployment() && (
-            <BaseCard className="col-span-1 border">
+            <BaseCard className="border-0 rounded-none bg-white dark:bg-gray-900">
               <div className="flex-1 p-4 md:p-5 space-y-4">
                 <div className="flex items-start justify-between">
                   <Phone
@@ -459,7 +466,7 @@ export const ConfigureAssistantDeploymentPage = () => {
 
           {/* Web Widget */}
           {assistant?.hasWebplugindeployment() && (
-            <BaseCard className="col-span-1 border">
+            <BaseCard className="border-0 rounded-none bg-white dark:bg-gray-900">
               <div className="flex-1 p-4 md:p-5 space-y-4">
                 <div className="flex items-start justify-between">
                   <Globe
@@ -507,6 +514,19 @@ export const ConfigureAssistantDeploymentPage = () => {
                 />
               </div>
             </BaseCard>
+          )}
+
+          {/* Fill empty grid cells so bg-gray-200 doesn't bleed through */}
+          {Array.from({ length: (3 - (deploymentCount % 3)) % 3 }).map(
+            (_, i) => (
+              <div
+                key={`filler-${i}`}
+                className="bg-white dark:bg-gray-900 hidden xl:block"
+              />
+            ),
+          )}
+          {deploymentCount % 2 !== 0 && (
+            <div className="bg-white dark:bg-gray-900 hidden sm:block xl:hidden" />
           )}
         </div>
       ) : (

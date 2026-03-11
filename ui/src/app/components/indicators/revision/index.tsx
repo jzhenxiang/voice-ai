@@ -55,7 +55,7 @@ export const RevisionIndicator: FC<{
 
   return (
     <span
-      className={`shrink-0 inline-flex items-center rounded-[2px] ring-1 ${config.bgColor} ${config.textColor} font-medium ${sizeClass.container} ${config.ringColor}`}
+      className={`shrink-0 inline-flex items-center ring-1 ${config.bgColor} ${config.textColor} font-medium ${sizeClass.container} ${config.ringColor}`}
     >
       <Icon
         className={`${config.iconColor}`}

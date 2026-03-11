@@ -184,7 +184,6 @@ type AssistantDeploymentService interface {
 		ctx context.Context,
 		auth types.SimplePrinciple,
 		assistantId uint64,
-		name string,
 		greeting, mistake *string,
 		idealTimeout *uint64, idealTimeoutBackoff *uint64, idealTimeoutMessage *string, maxSessionDuration *uint64,
 		suggestion []string,

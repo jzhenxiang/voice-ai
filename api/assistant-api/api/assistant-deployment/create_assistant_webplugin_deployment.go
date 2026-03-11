@@ -34,7 +34,6 @@ func (deploymentApi *assistantDeploymentApi) CreateAssistantWebpluginDeployment(
 
 	wpDeployment, err := deploymentApi.deploymentService.CreateWebPluginDeployment(ctx,
 		iAuth, deployment.GetPlugin().GetAssistantId(),
-		deployment.GetPlugin().GetName(),
 		deployment.GetPlugin().Greeting,
 		deployment.GetPlugin().Mistake,
 		&deployment.GetPlugin().IdealTimeout,

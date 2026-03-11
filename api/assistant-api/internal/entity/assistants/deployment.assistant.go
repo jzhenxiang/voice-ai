@@ -96,7 +96,6 @@ type AssistantDeploymentBehavior struct {
 type AssistantWebPluginDeployment struct {
 	AssistantDeploymentBehavior
 
-	Name       string                 `json:"name" gorm:"type:string;size:50;not null;"`
 	Suggestion gorm_types.StringArray `json:"suggestion" gorm:"column:suggestions;type:string"`
 
 	//

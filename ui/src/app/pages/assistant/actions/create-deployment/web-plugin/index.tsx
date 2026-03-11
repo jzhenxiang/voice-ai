@@ -4,14 +4,9 @@ import {
   ConfigureExperience,
   WebWidgetExperienceConfig,
 } from '@/app/pages/assistant/actions/create-deployment/web-plugin/configure-experience';
-import {
-  ConfigureFeature,
-  FeatureConfig,
-} from '@/app/pages/assistant/actions/create-deployment/web-plugin/configure-feature';
 import { useRapidaStore } from '@/hooks';
 import { useCurrentCredential } from '@/hooks/use-credential';
 import { useGlobalNavigation } from '@/hooks/use-global-navigator';
-import { Globe } from 'lucide-react';
 import { FC, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
@@ -31,10 +26,15 @@ import {
   GetDefaultSpeechToTextIfInvalid,
   ValidateSpeechToTextIfInvalid,
 } from '@/app/components/providers/speech-to-text/provider';
-import { ValidateTextToSpeechIfInvalid } from '@/app/components/providers/text-to-speech/provider';
+import {
+  GetDefaultSpeakerConfig,
+  GetDefaultTextToSpeechIfInvalid,
+  ValidateTextToSpeechIfInvalid,
+} from '@/app/components/providers/text-to-speech/provider';
 import { connectionConfig } from '@/configs';
 import { AssistantWebwidgetDeploymentDialog } from '@/app/components/base/modal/assistant-instruction-modal';
 import { TabForm } from '@/app/components/form/tab-form';
+import { useConfirmDialog } from '@/app/pages/assistant/actions/hooks/use-confirmation';
 import {
   IBlueBGArrowButton,
   ICancelButton,
@@ -59,11 +59,6 @@ const STEPS = [
     name: 'Voice Output',
     description: 'Configure the text-to-speech provider for audio responses.',
   },
-  {
-    code: 'features',
-    name: 'Features',
-    description: 'Enable sections and features available in the web widget.',
-  },
 ];
 
 export function ConfigureAssistantWebDeploymentPage() {
@@ -84,6 +79,7 @@ const ConfigureAssistantWebDeployment: FC<{ assistantId: string }> = ({
   const { goToDeploymentAssistant } = useGlobalNavigation();
   const { loading, showLoader, hideLoader } = useRapidaStore();
   const { authId, projectId, token } = useCurrentCredential();
+  const { showDialog, ConfirmDialogComponent } = useConfirmDialog({});
 
   const [activeTab, setActiveTab] = useState('experience');
   const [errorMessage, setErrorMessage] = useState('');
@@ -119,16 +115,10 @@ const ConfigureAssistantWebDeployment: FC<{ assistantId: string }> = ({
     parameters: Metadata[];
   }>({
     provider: 'cartesia',
-    parameters: GetDefaultSpeechToTextIfInvalid(
+    parameters: GetDefaultTextToSpeechIfInvalid(
       'cartesia',
-      GetDefaultMicrophoneConfig(),
+      GetDefaultSpeakerConfig(),
     ),
-  });
-
-  const [featureConfig, setFeatureConfig] = useState<FeatureConfig>({
-    qAListing: false,
-    productCatalog: false,
-    blogPost: false,
   });
 
   useEffect(() => {
@@ -178,11 +168,6 @@ const ConfigureAssistantWebDeployment: FC<{ assistantId: string }> = ({
           });
         }
 
-        setFeatureConfig({
-          qAListing: deployment.getHelpcenterenabled(),
-          productCatalog: deployment.getProductcatalogenabled(),
-          blogPost: deployment.getArticlecatalogenabled(),
-        });
       })
       .catch(err => {
         hideLoader();
@@ -258,7 +243,7 @@ const ConfigureAssistantWebDeployment: FC<{ assistantId: string }> = ({
   const handleSkipVoiceOutput = () => {
     setErrorMessage('');
     setVoiceOutputEnable(false);
-    setActiveTab('features');
+    handleDeployWebPlugin();
   };
 
   const handleDeployWebPlugin = () => {
@@ -328,9 +313,9 @@ const ConfigureAssistantWebDeployment: FC<{ assistantId: string }> = ({
       webDeployment.setMaxsessionduration(experienceConfig.maxCallDuration);
 
     webDeployment.setSuggestionList(experienceConfig.suggestions);
-    webDeployment.setHelpcenterenabled(featureConfig.qAListing);
-    webDeployment.setProductcatalogenabled(featureConfig.productCatalog);
-    webDeployment.setArticlecatalogenabled(featureConfig.blogPost);
+    webDeployment.setHelpcenterenabled(false);
+    webDeployment.setProductcatalogenabled(false);
+    webDeployment.setArticlecatalogenabled(false);
     webDeployment.setUploadfileenabled(false);
 
     if (voiceInputEnable) {
@@ -383,6 +368,7 @@ const ConfigureAssistantWebDeployment: FC<{ assistantId: string }> = ({
 
   return (
     <>
+      <ConfirmDialogComponent />
       <AssistantWebwidgetDeploymentDialog
         assistantId={assistantId}
         modalOpen={showInstruction}
@@ -412,7 +398,7 @@ const ConfigureAssistantWebDeployment: FC<{ assistantId: string }> = ({
           form={[
             {
               code: 'experience',
-              name: 'Experience',
+              name: 'General Experience',
               description:
                 'Define the greeting, quick-start questions, and session behaviour.',
               body: (
@@ -424,7 +410,9 @@ const ConfigureAssistantWebDeployment: FC<{ assistantId: string }> = ({
               actions: [
                 <ICancelButton
                   className="w-full h-full"
-                  onClick={() => goToDeploymentAssistant(assistantId)}
+                  onClick={() =>
+                    showDialog(() => goToDeploymentAssistant(assistantId))
+                  }
                 >
                   Cancel
                 </ICancelButton>,
@@ -451,7 +439,9 @@ const ConfigureAssistantWebDeployment: FC<{ assistantId: string }> = ({
               actions: [
                 <ICancelButton
                   className="w-full h-full"
-                  onClick={() => goToDeploymentAssistant(assistantId)}
+                  onClick={() =>
+                    showDialog(() => goToDeploymentAssistant(assistantId))
+                  }
                 >
                   Cancel
                 </ICancelButton>,
@@ -484,7 +474,9 @@ const ConfigureAssistantWebDeployment: FC<{ assistantId: string }> = ({
               actions: [
                 <ICancelButton
                   className="w-full h-full"
-                  onClick={() => goToDeploymentAssistant(assistantId)}
+                  onClick={() =>
+                    showDialog(() => goToDeploymentAssistant(assistantId))
+                  }
                 >
                   Cancel
                 </ICancelButton>,
@@ -494,33 +486,6 @@ const ConfigureAssistantWebDeployment: FC<{ assistantId: string }> = ({
                 >
                   Skip
                 </ISecondaryButton>,
-                <IBlueBGArrowButton
-                  type="button"
-                  className="w-full h-full"
-                  onClick={handleNext}
-                >
-                  Next
-                </IBlueBGArrowButton>,
-              ],
-            },
-            {
-              code: 'features',
-              name: 'Features',
-              description:
-                'Enable sections and features available in the web widget.',
-              body: (
-                <ConfigureFeature
-                  config={featureConfig}
-                  onConfigChange={setFeatureConfig}
-                />
-              ),
-              actions: [
-                <ICancelButton
-                  className="w-full h-full"
-                  onClick={() => goToDeploymentAssistant(assistantId)}
-                >
-                  Cancel
-                </ICancelButton>,
                 <IBlueBGArrowButton
                   type="button"
                   className="w-full h-full"

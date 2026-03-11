@@ -1,0 +1,1 @@
+ALTER TABLE public.assistant_web_plugin_deployments ADD COLUMN ideal_timeout_backoff BIGINT;

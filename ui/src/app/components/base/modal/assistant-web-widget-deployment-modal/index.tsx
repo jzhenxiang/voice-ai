@@ -61,11 +61,11 @@ export function AssistantWebWidgetlDeploymentDialog(
 theme: {
     color: "black",
 },
-assistant_id: "2139456643765633024",
-token:
-    "",
+assistant_id: "${props.deployment.getAssistantid() || 'YOUR_ASSISTANT_ID'}",
+token: "{RAPIDA_PROJECT_KEY}",
 user: {
-    name: "Guest",
+    id: "{UNIQUE_IDENTIFIER}",
+    name: "{NAME}",
 }
 }</script>`.trim()}
                       />

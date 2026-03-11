@@ -109,9 +109,9 @@ const ConfigureAssistantApiDeployment: FC<{ assistantId: string }> = ({
     parameters: Metadata[];
   }>({
     provider: 'cartesia',
-    parameters: GetDefaultSpeechToTextIfInvalid(
+    parameters: GetDefaultTextToSpeechIfInvalid(
       'cartesia',
-      GetDefaultMicrophoneConfig(),
+      GetDefaultSpeakerConfig(),
     ),
   });
 

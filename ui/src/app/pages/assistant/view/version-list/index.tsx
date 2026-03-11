@@ -111,7 +111,7 @@ export function Version(props: VersionProps) {
                     {assistantProviderAction.assistant?.getAssistantproviderid() !==
                     apm.getAssistantprovidermodel()?.getId() ? (
                       <IBlueBorderButton
-                        className="h-8 bg-primary/10 border-primary/30 rounded-[2px]"
+                        className="h-8 bg-primary/10 border-primary/30"
                         disabled={
                           assistantProviderAction.assistant?.getAssistantproviderid() ===
                           apm.getAssistantprovidermodel()?.getId()
@@ -171,7 +171,7 @@ export function Version(props: VersionProps) {
                     {assistantProviderAction.assistant?.getAssistantproviderid() !==
                     apm.getAssistantprovideragentkit()?.getId() ? (
                       <IBlueBorderButton
-                        className="h-8 bg-primary/10 border-primary/30 rounded-[2px]"
+                        className="h-8 bg-primary/10 border-primary/30"
                         disabled={
                           assistantProviderAction.assistant?.getAssistantproviderid() ===
                           apm.getAssistantprovideragentkit()?.getId()

@@ -73,7 +73,7 @@ window.chatbotConfig = {
             </FieldSet>
           </ModalBody>
           <ModalFooter>
-            <ICancelButton onClick={() => mldAttr.setModalOpen(true)}>
+            <ICancelButton onClick={() => mldAttr.setModalOpen(false)}>
               Close
             </ICancelButton>
             <ILinkButton href="https://doc.rapida.ai" target="_blank">

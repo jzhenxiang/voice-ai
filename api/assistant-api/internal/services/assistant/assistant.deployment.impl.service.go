@@ -42,7 +42,6 @@ func (eService assistantDeploymentService) CreateWebPluginDeployment(
 	ctx context.Context,
 	auth types.SimplePrinciple,
 	assistantId uint64,
-	name string,
 	greeting, mistake *string,
 	idealTimeout *uint64,
 	idealTimeoutBackoff *uint64,
@@ -53,7 +52,6 @@ func (eService assistantDeploymentService) CreateWebPluginDeployment(
 ) (*internal_assistant_entity.AssistantWebPluginDeployment, error) {
 	db := eService.postgres.DB(ctx)
 	deployment := &internal_assistant_entity.AssistantWebPluginDeployment{
-		Name: name,
 		AssistantDeploymentBehavior: internal_assistant_entity.AssistantDeploymentBehavior{
 			AssistantDeployment: internal_assistant_entity.AssistantDeployment{
 				Mutable: gorm_models.Mutable{
