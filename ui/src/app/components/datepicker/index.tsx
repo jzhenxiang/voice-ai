@@ -63,9 +63,9 @@ export const Datepicker: FC<{
           'dark:placeholder-gray-600 placeholder-gray-400',
           'dark:text-gray-300 text-gray-600',
           'outline-solid outline-[1.5px] outline-transparent',
-          'focus-within:outline-blue-600 focus:outline-blue-600 outline-offset-[-1.5px]',
+          'focus-within:outline-primary focus:outline-primary outline-offset-[-1.5px]',
           'border-b border-gray-300 dark:border-gray-700',
-          'dark:focus:border-blue-600 focus:border-blue-600',
+          'dark:focus:border-primary focus:border-primary',
           'transition-all duration-200 ease-in-out',
           'bg-white dark:bg-gray-950',
           'px-2 py-1.5 pl-3',
@@ -75,7 +75,7 @@ export const Datepicker: FC<{
         )}
         options={options}
       />
-      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500 dark:text-gray-400">
         <Calendar className="w-4 h-4" strokeWidth={1.5} />
       </div>
     </div>
