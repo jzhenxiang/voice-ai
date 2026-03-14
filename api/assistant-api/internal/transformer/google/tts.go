@@ -34,6 +34,7 @@ type googleTextToSpeech struct {
 	client       *texttospeech.Client                                  // Google TTS client.
 	streamClient texttospeechpb.TextToSpeech_StreamingSynthesizeClient // Streaming client for real-time TTS.
 	onPacket     func(pkt ...internal_type.Packet) error               // Callback for handling audio packets.
+	normalizer   internal_type.TextNormalizer                          // Text normalizer for preprocessing.
 
 	// TTS latency tracking
 	ttsStartedAt  time.Time
@@ -75,6 +76,7 @@ func NewGoogleTextToSpeech(ctx context.Context, logger commons.Logger, credentia
 		onPacket:     onPacket,
 		client:       client,
 		googleOption: googleOption,
+		normalizer:   NewGoogleNormalizer(logger, opts),
 	}, nil
 }
 
@@ -164,11 +166,12 @@ func (google *googleTextToSpeech) Transform(ctx context.Context, in internal_typ
 			google.ttsStartedAt = time.Now()
 		}
 		google.mu.Unlock()
-		google.logger.Debugf("google-tts: sending text for synthesis: %s", input.Text)
+		normalized := google.normalizer.Normalize(ctx, input.Text)
+		google.logger.Debugf("google-tts: sending text for synthesis: %s", normalized)
 		if err := sCli.Send(&texttospeechpb.StreamingSynthesizeRequest{
 			StreamingRequest: &texttospeechpb.StreamingSynthesizeRequest_Input{
 				Input: &texttospeechpb.StreamingSynthesisInput{
-					InputSource: &texttospeechpb.StreamingSynthesisInput_Text{Text: input.Text},
+					InputSource: &texttospeechpb.StreamingSynthesisInput_Text{Text: normalized},
 				},
 			},
 		}); err != nil {
@@ -185,6 +188,12 @@ func (google *googleTextToSpeech) Transform(ctx context.Context, in internal_typ
 		})
 		return nil
 	case internal_type.LLMResponseDonePacket:
+		// Signal to the server that no more input will be sent.
+		// This triggers server-side EOF → recvLoop emits TextToSpeechEndPacket.
+		if err := sCli.CloseSend(); err != nil {
+			google.logger.Errorf("google-tts: failed to close send: %v", err)
+			return fmt.Errorf("failed to close send: %w", err)
+		}
 		return nil
 	default:
 		return fmt.Errorf("google-tts: unsupported input type %T", in)
@@ -222,9 +231,23 @@ func (g *googleTextToSpeech) recvLoop(streamClient texttospeechpb.TextToSpeech_S
 			}
 			if strings.Contains(err.Error(), "Stream aborted due to long duration elapsed without input sent") {
 				g.logger.Debugf("google-tts: stream aborted due to timeout, reinitializing")
+				g.mu.Lock()
+				effectiveCtx := g.contextId
+				if effectiveCtx == "" {
+					effectiveCtx = initialContextId
+				}
+				g.mu.Unlock()
+				g.onPacket(internal_type.TextToSpeechEndPacket{ContextID: effectiveCtx})
 				go g.Initialize()
 				return
 			}
+			g.mu.Lock()
+			effectiveCtx := g.contextId
+			if effectiveCtx == "" {
+				effectiveCtx = initialContextId
+			}
+			g.mu.Unlock()
+			g.onPacket(internal_type.TextToSpeechEndPacket{ContextID: effectiveCtx})
 			g.logger.Errorf("google-tts: error receiving from stream: %v", err)
 			return
 		}

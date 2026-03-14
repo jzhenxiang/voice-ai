@@ -5,3 +5,6 @@
 license-check-and-add.json
 .claude/
 CLAUDE.md
+
+# Integration test credentials (never commit real API keys)
+**/integration_config.yaml

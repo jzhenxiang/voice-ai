@@ -7,7 +7,7 @@ import (
 
 	replicate_go "github.com/replicate/replicate-go"
 
-	internal_callers "github.com/rapidaai/api/integration-api/internal/caller"
+	internal_callers "github.com/rapidaai/api/integration-api/internal/type"
 	internal_caller_metrics "github.com/rapidaai/api/integration-api/internal/caller/metrics"
 	"github.com/rapidaai/pkg/commons"
 	"github.com/rapidaai/pkg/utils"

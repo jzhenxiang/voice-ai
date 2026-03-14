@@ -12,7 +12,7 @@ import (
 	"path"
 	"time"
 
-	internal_callers "github.com/rapidaai/api/integration-api/internal/caller"
+	internal_callers "github.com/rapidaai/api/integration-api/internal/type"
 	"github.com/rapidaai/pkg/commons"
 	integration_api "github.com/rapidaai/protos"
 )

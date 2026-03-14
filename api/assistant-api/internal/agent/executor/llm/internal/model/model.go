@@ -355,7 +355,7 @@ func (e *modelAssistantExecutor) buildChatRequest(communication internal_type.Co
 		template.Prompt,
 		utils.MergeMaps(e.inputBuilder.PromptArguments(template.Variables), communication.GetArgs()),
 	)
-	return e.inputBuilder.Chat(
+	req := e.inputBuilder.Chat(
 		contextID,
 		&protos.Credential{
 			Id:    e.providerCredential.GetId(),
@@ -370,6 +370,8 @@ func (e *modelAssistantExecutor) buildChatRequest(communication internal_type.Co
 		},
 		append(systemMessages, messages...)...,
 	)
+	req.ProviderName = strings.ToLower(assistant.AssistantProviderModel.ModelProviderName)
+	return req
 }
 
 // executeToolCalls executes all requested tool calls and sends the follow-up

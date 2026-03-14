@@ -6,7 +6,7 @@ import (
 
 	"github.com/openai/openai-go"
 
-	internal_callers "github.com/rapidaai/api/integration-api/internal/caller"
+	internal_callers "github.com/rapidaai/api/integration-api/internal/type"
 	"github.com/rapidaai/pkg/commons"
 	"github.com/rapidaai/protos"
 )

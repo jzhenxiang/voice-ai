@@ -7,7 +7,6 @@ package integration_client
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	"google.golang.org/grpc"
@@ -39,22 +38,9 @@ type IntegrationServiceClient interface {
 
 type integrationServiceClient struct {
 	clients.InternalClient
-	cfg               *config.AppConfig
-	logger            commons.Logger
-	cohereClient      protos.CohereServiceClient
-	replicateClient   protos.ReplicateServiceClient
-	openAiClient      protos.OpenAiServiceClient
-	voyageAiClient    protos.VoyageAiServiceClient
-	bedrockClient     protos.BedrockServiceClient
-	azureAiClient     protos.AzureServiceClient
-	anthropicClient   protos.AnthropicServiceClient
-	geminiClient      protos.GeminiServiceClient
-	vertexaiClient    protos.VertexAiServiceClient
-	mistralClient     protos.MistralServiceClient
-	togetherAiClient  protos.TogetherAiServiceClient
-	deepInfraCLient   protos.DeepInfraServiceClient
-	huggingfaceClient protos.HuggingfaceServiceClient
-	awsbedrockClient  protos.BedrockServiceClient
+	cfg           *config.AppConfig
+	logger        commons.Logger
+	unifiedClient protos.UnifiedProviderServiceClient
 }
 
 func NewIntegrationServiceClientGRPC(config *config.AppConfig, logger commons.Logger, redis connectors.RedisConnector) IntegrationServiceClient {
@@ -65,23 +51,10 @@ func NewIntegrationServiceClientGRPC(config *config.AppConfig, logger commons.Lo
 		logger.Fatalf("Unable to create connection %v", err)
 	}
 	return &integrationServiceClient{
-		InternalClient:    clients.NewInternalClient(config, logger, redis),
-		cfg:               config,
-		logger:            logger,
-		cohereClient:      protos.NewCohereServiceClient(lightConnection),
-		replicateClient:   protos.NewReplicateServiceClient(lightConnection),
-		openAiClient:      protos.NewOpenAiServiceClient(lightConnection),
-		anthropicClient:   protos.NewAnthropicServiceClient(lightConnection),
-		geminiClient:      protos.NewGeminiServiceClient(lightConnection),
-		vertexaiClient:    protos.NewVertexAiServiceClient(lightConnection),
-		mistralClient:     protos.NewMistralServiceClient(lightConnection),
-		togetherAiClient:  protos.NewTogetherAiServiceClient(lightConnection),
-		deepInfraCLient:   protos.NewDeepInfraServiceClient(lightConnection),
-		voyageAiClient:    protos.NewVoyageAiServiceClient(lightConnection),
-		bedrockClient:     protos.NewBedrockServiceClient(lightConnection),
-		azureAiClient:     protos.NewAzureServiceClient(lightConnection),
-		huggingfaceClient: protos.NewHuggingfaceServiceClient(lightConnection),
-		awsbedrockClient:  protos.NewBedrockServiceClient(lightConnection),
+		InternalClient: clients.NewInternalClient(config, logger, redis),
+		cfg:            config,
+		logger:         logger,
+		unifiedClient:  protos.NewUnifiedProviderServiceClient(lightConnection),
 	}
 }
 
@@ -89,95 +62,31 @@ func (client *integrationServiceClient) Embedding(c context.Context,
 	auth types.SimplePrinciple,
 	providerName string,
 	request *protos.EmbeddingRequest) (*protos.EmbeddingResponse, error) {
-	switch providerName := strings.ToLower(providerName); providerName {
-	case "cohere":
-		return client.cohereClient.Embedding(client.WithAuth(c, auth), request)
-	case "openai":
-		return client.openAiClient.Embedding(client.WithAuth(c, auth), request)
-	case "voyageai":
-		return client.voyageAiClient.Embedding(client.WithAuth(c, auth), request)
-	case "bedrock":
-		return client.bedrockClient.Embedding(client.WithAuth(c, auth), request)
-	case "azure-foundry":
-		return client.azureAiClient.Embedding(client.WithAuth(c, auth), request)
-	case "gemini":
-		return client.geminiClient.Embedding(client.WithAuth(c, auth), request)
-	// case "mistral":
-	// return client.mistralClient.Embedding(client.WithAuth(c, auth), request)
-	default:
-		return nil, errors.New("illegal provider for chat request")
-	}
+	request.ProviderName = strings.ToLower(providerName)
+	return client.unifiedClient.Embedding(client.WithAuth(c, auth), request)
 }
 
 func (client *integrationServiceClient) Reranking(c context.Context,
 	auth types.SimplePrinciple,
 	providerName string,
 	request *protos.RerankingRequest) (*protos.RerankingResponse, error) {
-	switch providerName := strings.ToLower(providerName); providerName {
-	case "cohere":
-		return client.cohereClient.Reranking(client.WithAuth(c, auth), request)
-	default:
-		return nil, errors.New("illegal provider for chat request")
-	}
+	request.ProviderName = strings.ToLower(providerName)
+	return client.unifiedClient.Reranking(client.WithAuth(c, auth), request)
 }
 
 func (client *integrationServiceClient) Chat(c context.Context,
 	auth types.SimplePrinciple,
 	providerName string,
 	request *protos.ChatRequest) (*protos.ChatResponse, error) {
-	switch providerName := strings.ToLower(providerName); providerName {
-	case "cohere":
-		return client.cohereClient.Chat(client.WithAuth(c, auth), request)
-	case "anthropic":
-		return client.anthropicClient.Chat(client.WithAuth(c, auth), request)
-	case "replicate":
-		return client.replicateClient.Chat(client.WithAuth(c, auth), request)
-	case "gemini":
-		return client.geminiClient.Chat(client.WithAuth(c, auth), request)
-	case "mistral":
-		return client.mistralClient.Chat(client.WithAuth(c, auth), request)
-	case "togetherai":
-		return client.togetherAiClient.Chat(client.WithAuth(c, auth), request)
-	case "openai":
-		return client.openAiClient.Chat(client.WithAuth(c, auth), request)
-	case "aws-bedrock":
-		return client.bedrockClient.Chat(client.WithAuth(c, auth), request)
-	case "azure-foundry":
-		return client.azureAiClient.Chat(client.WithAuth(c, auth), request)
-	case "vertexai":
-		return client.vertexaiClient.Chat(client.WithAuth(c, auth), request)
-	default:
-		return nil, errors.New("illegal provider for chat request")
-	}
+	request.ProviderName = strings.ToLower(providerName)
+	return client.unifiedClient.Chat(client.WithAuth(c, auth), request)
 }
 
-// StreamChat opens a bidirectional stream for the given provider.
-// Returns raw grpc.BidiStreamingClient for caller to manage the connection:
-//   - Send requests via stream.Send(request)
-//   - Receive responses via stream.Recv()
-//   - Close when done via stream.CloseSend()
+// StreamChat opens a bidirectional stream via the unified provider service.
+// The caller must set ProviderName on each ChatRequest before sending.
 func (client *integrationServiceClient) StreamChat(c context.Context, auth types.SimplePrinciple, providerName string) (grpc.BidiStreamingClient[protos.ChatRequest, protos.ChatResponse], error) {
 	ctx := client.WithAuth(c, auth)
-	switch providerName := strings.ToLower(providerName); providerName {
-	case "openai":
-		return client.openAiClient.StreamChat(ctx)
-	case "anthropic":
-		return client.anthropicClient.StreamChat(ctx)
-	case "gemini":
-		return client.geminiClient.StreamChat(ctx)
-	case "cohere":
-		return client.cohereClient.StreamChat(ctx)
-	case "azure-foundry":
-		return client.azureAiClient.StreamChat(ctx)
-	case "vertexai":
-		return client.vertexaiClient.StreamChat(ctx)
-	case "mistral":
-		return client.mistralClient.StreamChat(ctx)
-	case "replicate":
-		return client.replicateClient.StreamChat(ctx)
-	default:
-		return nil, errors.New("illegal provider for stream chat request")
-	}
+	return client.unifiedClient.StreamChat(ctx)
 }
 
 func (client *integrationServiceClient) VerifyCredential(c context.Context,
@@ -185,32 +94,8 @@ func (client *integrationServiceClient) VerifyCredential(c context.Context,
 	providerName string,
 	cr *protos.Credential) (*protos.VerifyCredentialResponse, error) {
 	request := &protos.VerifyCredentialRequest{
-		Credential: cr,
+		Credential:   cr,
+		ProviderName: strings.ToLower(providerName),
 	}
-	switch providerName := strings.ToLower(providerName); providerName {
-	case "cohere":
-		return client.cohereClient.VerifyCredential(client.WithAuth(c, auth), request)
-	case "anthropic":
-		return client.anthropicClient.VerifyCredential(client.WithAuth(c, auth), request)
-	case "replicate":
-		return client.replicateClient.VerifyCredential(client.WithAuth(c, auth), request)
-	case "gemini":
-		return client.geminiClient.VerifyCredential(client.WithAuth(c, auth), request)
-	case "vertexai":
-		return client.vertexaiClient.VerifyCredential(client.WithAuth(c, auth), request)
-	case "mistral":
-		return client.mistralClient.VerifyCredential(client.WithAuth(c, auth), request)
-	case "openai":
-		return client.openAiClient.VerifyCredential(client.WithAuth(c, auth), request)
-	case "voyageai":
-		return client.voyageAiClient.VerifyCredential(client.WithAuth(c, auth), request)
-	case "huggingface":
-		return client.huggingfaceClient.VerifyCredential(client.WithAuth(c, auth), request)
-	case "aws-bedrock":
-		return client.awsbedrockClient.VerifyCredential(client.WithAuth(c, auth), request)
-	case "azure-foundry":
-		return client.azureAiClient.VerifyCredential(client.WithAuth(c, auth), request)
-	default:
-		return nil, errors.New("illegal provider for chat request")
-	}
+	return client.unifiedClient.VerifyCredential(client.WithAuth(c, auth), request)
 }

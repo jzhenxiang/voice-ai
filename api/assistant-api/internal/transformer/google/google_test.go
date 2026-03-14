@@ -66,6 +66,17 @@ func TestNewGoogleOption_EmptyStringValues(t *testing.T) {
 	assert.Empty(t, opt.clientOptons) // Empty strings are skipped
 }
 
+func TestNewGoogleOption_OnlyServiceAccountKey(t *testing.T) {
+	cred := newVaultCredential(map[string]interface{}{
+		"service_account_key": `{"type":"service_account"}`,
+	})
+	opt, err := NewGoogleOption(newTestLogger(), cred, utils.Option{})
+	assert.NoError(t, err)
+	assert.NotNil(t, opt)
+	assert.Len(t, opt.clientOptons, 1) // Only credentials JSON
+	assert.Empty(t, opt.projectId)
+}
+
 // --- SpeechToTextOptions Tests ---
 
 func TestSpeechToTextOptions_Defaults(t *testing.T) {
@@ -122,6 +133,26 @@ func TestSpeechToTextOptions_WithMultipleLanguages(t *testing.T) {
 	assert.Equal(t, []string{"en-US", "fr-FR", "de-DE"}, sttOpts.Config.LanguageCodes)
 }
 
+func TestSpeechToTextOptions_WithEmptyLanguageSegments(t *testing.T) {
+	cred := newVaultCredential(map[string]interface{}{"key": "k", "project_id": "p"})
+	opts := utils.Option{
+		"listen.language": "en-US" + commons.SEPARATOR + "" + commons.SEPARATOR + "  " + commons.SEPARATOR + "fr-FR",
+	}
+	opt, _ := NewGoogleOption(newTestLogger(), cred, opts)
+	sttOpts := opt.SpeechToTextOptions()
+
+	// Empty and whitespace-only segments should be filtered out
+	assert.Equal(t, []string{"en-US", "fr-FR"}, sttOpts.Config.LanguageCodes)
+}
+
+func TestSpeechToTextOptions_DefaultModel(t *testing.T) {
+	cred := newVaultCredential(map[string]interface{}{"key": "k", "project_id": "p"})
+	opt, _ := NewGoogleOption(newTestLogger(), cred, utils.Option{})
+	sttOpts := opt.SpeechToTextOptions()
+
+	assert.Equal(t, DefaultModel, sttOpts.Config.Model)
+}
+
 func TestSpeechToTextOptions_WithModelOverride(t *testing.T) {
 	cred := newVaultCredential(map[string]interface{}{"key": "k", "project_id": "p"})
 	opts := utils.Option{
@@ -144,6 +175,20 @@ func TestTextToSpeechOptions_Defaults(t *testing.T) {
 	assert.Equal(t, DefaultVoice, ttsOpts.Voice.Name)
 	assert.Equal(t, texttospeechpb.AudioEncoding_PCM, ttsOpts.StreamingAudioConfig.AudioEncoding)
 	assert.Equal(t, int32(16000), ttsOpts.StreamingAudioConfig.SampleRateHertz)
+}
+
+func TestTextToSpeechOptions_WithEmptyVoiceOverride(t *testing.T) {
+	cred := newVaultCredential(map[string]interface{}{"key": "k", "project_id": "p"})
+	opts := utils.Option{
+		"speak.voice.id": "",
+	}
+	opt, _ := NewGoogleOption(newTestLogger(), cred, opts)
+	ttsOpts := opt.TextToSpeechOptions()
+
+	// Empty string override should still set the voice to "" — this is a potential bug.
+	// If the implementation doesn't guard against empty, the voice name will be blank.
+	assert.Equal(t, "", ttsOpts.Voice.Name,
+		"empty speak.voice.id sets voice to empty string (consider guarding against this)")
 }
 
 func TestTextToSpeechOptions_WithVoiceOverride(t *testing.T) {

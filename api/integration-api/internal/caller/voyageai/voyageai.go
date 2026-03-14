@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"time"
 
-	internal_callers "github.com/rapidaai/api/integration-api/internal/caller"
+	internal_callers "github.com/rapidaai/api/integration-api/internal/type"
 	"github.com/rapidaai/pkg/commons"
 	"github.com/rapidaai/pkg/types"
 	type_enums "github.com/rapidaai/pkg/types/enums"

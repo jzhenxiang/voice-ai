@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	internal_callers "github.com/rapidaai/api/integration-api/internal/caller"
+	internal_callers "github.com/rapidaai/api/integration-api/internal/type"
 	"github.com/rapidaai/pkg/commons"
 	"github.com/rapidaai/pkg/utils"
 	integration_api "github.com/rapidaai/protos"

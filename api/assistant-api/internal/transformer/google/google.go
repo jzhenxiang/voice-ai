@@ -21,7 +21,7 @@ import (
 // Introduced constants for default values
 const (
 	DefaultLanguageCode = "en-US"            // Default language code for Speech-to-Text
-	DefaultModel        = "default"          // Default model used for Speech recognition
+	DefaultModel        = "long"             // Default model used for Speech recognition
 	DefaultVoice        = "en-US-Chirp-HD-F" // Default voice for Text-to-Speech
 )
 
@@ -91,7 +91,7 @@ func (gog *googleOption) SpeechToTextOptions() *speechpb.StreamingRecognitionCon
 				EnableSpokenPunctuation:    true,
 			},
 			LanguageCodes: []string{DefaultLanguageCode},
-			Model:         "long",
+			Model:         DefaultModel,
 
 			// global// "latest_long, telephony",
 			// DenoiserConfig: &speechpb.DenoiserConfig{

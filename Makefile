@@ -8,7 +8,8 @@
         ps-all shell-web shell-integration shell-endpoint db-shell \
         push-base-images \
         push-rapida-golang-bookworm push-rapida-golang-alpine push-rapida-alpine \
-        push-rapida-debian-slim push-rapida-node-alpine push-rapida-python
+        push-rapida-debian-slim push-rapida-node-alpine push-rapida-python \
+        test-tts-integration test-stt-integration test-transformer-integration
 
 COMPOSE           := DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_DEFAULT_PLATFORM=linux/amd64 docker compose -f docker-compose.yml
 COMPOSE_KNOWLEDGE := DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_DEFAULT_PLATFORM=linux/amd64 docker compose -f docker-compose.yml -f docker-compose.knowledge.yml
@@ -586,7 +587,21 @@ run-integration:
 run-ui:
 	@echo "Running UI with yarn start in ui folder..."
 	cd ui && yarn start
+# ============================================================================
+# INTEGRATION TESTS
+# ============================================================================
 
+test-tts-integration:
+	@echo "Running TTS integration tests (requires testdata/integration_config.yaml)..."
+	go test -tags integration -v -run TestTTS -timeout 120s ./api/assistant-api/internal/transformer/...
+
+test-stt-integration:
+	@echo "Running STT integration tests (requires testdata/integration_config.yaml)..."
+	go test -tags integration -v -run TestSTT -timeout 120s ./api/assistant-api/internal/transformer/...
+
+test-transformer-integration:
+	@echo "Running all transformer integration tests..."
+	go test -tags integration -v -timeout 180s ./api/assistant-api/internal/transformer/...
 # Add appropriate aliases for clarity
 run-{service-name}:
 	@echo "Please specify a valid service name: document-api, assistant, web, endpoint, or integration."

@@ -15,16 +15,7 @@ import (
 
 // all the provider routes
 func ProviderApiRoute(Cfg *config.IntegrationConfig, S *grpc.Server, Logger commons.Logger, Postgres connectors.PostgresConnector) {
-	protos.RegisterCohereServiceServer(S, integrationApi.NewCohereGRPC(Cfg, Logger, Postgres))
-	protos.RegisterOpenAiServiceServer(S, integrationApi.NewOpenAiGRPC(Cfg, Logger, Postgres))
-	protos.RegisterGeminiServiceServer(S, integrationApi.NewGeminiGRPC(Cfg, Logger, Postgres))
-	protos.RegisterAzureServiceServer(S, integrationApi.NewAzureGRPC(Cfg, Logger, Postgres))
-	protos.RegisterAnthropicServiceServer(S, integrationApi.NewAnthropicGRPC(Cfg, Logger, Postgres))
-	protos.RegisterVoyageAiServiceServer(S, integrationApi.NewVoyageAiGRPC(Cfg, Logger, Postgres))
-	protos.RegisterHuggingfaceServiceServer(S, integrationApi.NewHuggingfaceGRPC(Cfg, Logger, Postgres))
-	protos.RegisterMistralServiceServer(S, integrationApi.NewMistralGRPC(Cfg, Logger, Postgres))
-	protos.RegisterReplicateServiceServer(S, integrationApi.NewReplicateGRPC(Cfg, Logger, Postgres))
-	protos.RegisterVertexAiServiceServer(S, integrationApi.NewVertexaiGRPC(Cfg, Logger, Postgres))
+	protos.RegisterUnifiedProviderServiceServer(S, integrationApi.NewUnifiedProviderGRPC(Cfg, Logger, Postgres))
 }
 
 // audit logging api route

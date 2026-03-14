@@ -1,0 +1,206 @@
+# Integration test configuration for LLM callers.
+# Copy this file to integration_config.yaml and fill in real credentials.
+# integration_config.yaml is .gitignored — never commit real API keys.
+#
+# Enable only the providers you want to test by setting enabled: true.
+
+# ─── Chat Completion ───────────────────────────────────────────────────────────
+chat:
+  openai:
+    enabled: false
+    credential:
+      key: "sk-..."
+    options:
+      model.name: "gpt-4o-mini"
+
+  anthropic:
+    enabled: false
+    credential:
+      key: "sk-ant-..."
+    options:
+      model.name: "claude-sonnet-4-20250514"
+      model.max_tokens: 1024
+
+  gemini:
+    enabled: false
+    credential:
+      key: "..."
+    options:
+      model.name: "gemini-2.0-flash"
+
+  vertexai:
+    enabled: false
+    credential:
+      project_id: "my-project"
+      service_account_key: '{"type":"service_account",...}'
+      region: "us-central1"
+    options:
+      model.name: "gemini-2.0-flash"
+
+  azure-foundry:
+    enabled: false
+    credential:
+      subscription_key: "..."
+      endpoint: "https://your-resource.openai.azure.com"
+    options:
+      model.name: "gpt-4o-mini"
+
+  cohere:
+    enabled: false
+    credential:
+      key: "..."
+    options:
+      model.name: "command-r-plus"
+
+  mistral:
+    enabled: false
+    credential:
+      key: "..."
+    options:
+      model.name: "mistral-small-latest"
+
+  replicate:
+    enabled: false
+    credential:
+      key: "..."
+    options:
+      model.name: "meta/meta-llama-3-8b-instruct"
+
+  huggingface:
+    enabled: false
+    credential:
+      key: "hf_..."
+    options:
+      model.name: "meta-llama/Meta-Llama-3-8B-Instruct"
+
+# ─── Embeddings ────────────────────────────────────────────────────────────────
+embedding:
+  openai:
+    enabled: false
+    credential:
+      key: "sk-..."
+    options:
+      model.name: "text-embedding-3-small"
+
+  gemini:
+    enabled: false
+    credential:
+      key: "..."
+    options:
+      model.name: "text-embedding-004"
+
+  vertexai:
+    enabled: false
+    credential:
+      project_id: "my-project"
+      service_account_key: '{"type":"service_account",...}'
+      region: "us-central1"
+    options:
+      model.name: "text-embedding-004"
+
+  azure-foundry:
+    enabled: false
+    credential:
+      subscription_key: "..."
+      endpoint: "https://your-resource.openai.azure.com"
+    options:
+      model.name: "text-embedding-3-small"
+
+  cohere:
+    enabled: false
+    credential:
+      key: "..."
+    options:
+      model.name: "embed-english-v3.0"
+
+  mistral:
+    enabled: false
+    credential:
+      key: "..."
+    options:
+      model.name: "mistral-embed"
+
+  huggingface:
+    enabled: false
+    credential:
+      key: "hf_..."
+    options:
+      model.name: "sentence-transformers/all-MiniLM-L6-v2"
+
+  voyageai:
+    enabled: false
+    credential:
+      key: "..."
+    options:
+      model.name: "voyage-3"
+
+# ─── Reranking ─────────────────────────────────────────────────────────────────
+reranking:
+  cohere:
+    enabled: false
+    credential:
+      key: "..."
+    options:
+      model.name: "rerank-v3.5"
+
+  voyageai:
+    enabled: false
+    credential:
+      key: "..."
+    options:
+      model.name: "rerank-2"
+
+# ─── Credential Verification ──────────────────────────────────────────────────
+verify:
+  openai:
+    enabled: false
+    credential:
+      key: "sk-..."
+
+  anthropic:
+    enabled: false
+    credential:
+      key: "sk-ant-..."
+
+  gemini:
+    enabled: false
+    credential:
+      key: "..."
+
+  vertexai:
+    enabled: false
+    credential:
+      project_id: "my-project"
+      service_account_key: '{"type":"service_account",...}'
+      region: "us-central1"
+
+  azure-foundry:
+    enabled: false
+    credential:
+      subscription_key: "..."
+      endpoint: "https://your-resource.openai.azure.com"
+
+  cohere:
+    enabled: false
+    credential:
+      key: "..."
+
+  mistral:
+    enabled: false
+    credential:
+      key: "..."
+
+  replicate:
+    enabled: false
+    credential:
+      key: "..."
+
+  huggingface:
+    enabled: false
+    credential:
+      key: "hf_..."
+
+  voyageai:
+    enabled: false
+    credential:
+      key: "..."

@@ -154,7 +154,8 @@ export function CreateAssistantPage() {
 
     // Extract {{variable}} references from all prompt content
     const variableRegex = /\{\{\s*(\w+)\s*\}\}/g;
-    const variables: { name: string; type: string; defaultvalue: string }[] = [];
+    const variables: { name: string; type: string; defaultvalue: string }[] =
+      [];
     const seen = new Set<string>();
     tmpl.instruction.forEach(inst => {
       let match;
@@ -404,7 +405,10 @@ export function CreateAssistantPage() {
             code: 'choose-model',
             body: (
               <>
-                <DocNoticeBlock docUrl="https://doc.rapida.ai/assistants/overview" linkText="Read docs">
+                <DocNoticeBlock
+                  docUrl="https://doc.rapida.ai/assistants/overview"
+                  linkText="Read docs"
+                >
                   Rapida Assistant enables you to deploy intelligent
                   conversational agents across multiple channels.
                 </DocNoticeBlock>
@@ -424,7 +428,8 @@ export function CreateAssistantPage() {
                         Usecase Template
                       </span>
                       <span className="text-xs text-gray-500 dark:text-gray-500 leading-relaxed">
-                        Browse 8 pre-configured assistant templates and auto-fill your form.
+                        Browse 8 pre-configured assistant templates and
+                        auto-fill your form.
                       </span>
                     </div>
                     <ArrowUpRight
@@ -521,9 +526,9 @@ export function CreateAssistantPage() {
                   </div>
                 </PageHeaderBlock>
                 <DocNoticeBlock docUrl="https://doc.rapida.ai/assistants/tools/">
-                  Activate the tools you want your assistant to use, allowing
-                  it to perform actions like fetching real-time data,
-                  processing complex tasks, and more.
+                  Activate the tools you want your assistant to use, allowing it
+                  to perform actions like fetching real-time data, processing
+                  complex tasks, and more.
                 </DocNoticeBlock>
                 <div className="overflow-auto flex flex-col flex-1">
                   {tools.length > 0 ? (

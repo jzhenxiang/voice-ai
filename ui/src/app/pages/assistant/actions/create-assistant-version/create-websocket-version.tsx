@@ -248,7 +248,7 @@ const CreateNewVersion: FC<{ assistantId: string }> = ({ assistantId }) => {
             ],
             body: (
               <>
-                <DocNoticeBlock docUrl="https://doc.rapida.ai/assistant/create-new-version">
+                <DocNoticeBlock docUrl="https://doc.rapida.ai/assistants/create-new-version">
                   Please note that new versions of the assistant will not be
                   deployed automatically.
                 </DocNoticeBlock>
@@ -314,7 +314,7 @@ const CreateNewVersion: FC<{ assistantId: string }> = ({ assistantId }) => {
             ],
             body: (
               <>
-                <DocNoticeBlock docUrl="https://doc.rapida.ai/assistant/create-new-version">
+                <DocNoticeBlock docUrl="https://doc.rapida.ai/assistants/create-new-version">
                   Please note that new versions of the assistant will not be
                   deployed automatically.
                 </DocNoticeBlock>
