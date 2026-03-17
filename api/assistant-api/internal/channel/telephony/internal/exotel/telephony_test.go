@@ -102,7 +102,7 @@ func TestReceiveCall(t *testing.T) {
 				"CustomField": "v1/talk/exotel/ctx/abc123",
 				"CallFrom":    "+919876543210",
 			},
-			expectedError: true, // Returns error for outbound call redirect
+			expectedError: false, // No error — provider already wrote the response
 			expectedPhone: "",
 			checkCallInfo: func(t *testing.T, info *internal_type.CallInfo) {
 				// CallInfo is nil when CustomField is present (outbound redirect)
@@ -139,8 +139,9 @@ func TestReceiveCall(t *testing.T) {
 				assert.Nil(t, callInfo)
 			} else {
 				assert.NoError(t, err)
-				require.NotNil(t, callInfo)
-				assert.Equal(t, tt.expectedPhone, callInfo.CallerNumber)
+				if callInfo != nil {
+					assert.Equal(t, tt.expectedPhone, callInfo.CallerNumber)
+				}
 			}
 
 			// Check CallInfo
@@ -211,9 +212,8 @@ func TestReceiveCall_OutboundRedirect(t *testing.T) {
 	telephony := &exotelTelephony{appCfg: &config.AssistantConfig{PublicAssistantHost: "test.example.com"}}
 	callInfo, err := telephony.ReceiveCall(c)
 
-	assert.Error(t, err)
+	assert.NoError(t, err)
 	assert.Nil(t, callInfo)
-	assert.Contains(t, err.Error(), "outbound call triggered")
 }
 
 // TestReceiveCall_CallInfoStructure tests the structure of CallInfo data

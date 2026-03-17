@@ -284,7 +284,7 @@ export const ConfigureAssistantDeploymentPage = () => {
                     className="w-6 h-6 text-orange-500 shrink-0"
                     strokeWidth={1.5}
                   />
-                  <RevisionIndicator status="DEPLOYED" size="small" />
+                  <RevisionIndicator status="DEPLOYED" />
                 </div>
                 {/* Title + description */}
                 <div>
@@ -342,7 +342,7 @@ export const ConfigureAssistantDeploymentPage = () => {
                     className="w-6 h-6 text-blue-600 shrink-0"
                     strokeWidth={1.5}
                   />
-                  <RevisionIndicator status="DEPLOYED" size="small" />
+                  <RevisionIndicator status="DEPLOYED" />
                 </div>
                 <div>
                   <p className="text-base font-semibold text-gray-900 dark:text-gray-100">
@@ -414,7 +414,7 @@ export const ConfigureAssistantDeploymentPage = () => {
                     className="w-6 h-6 text-green-600 shrink-0"
                     strokeWidth={1.5}
                   />
-                  <RevisionIndicator status="DEPLOYED" size="small" />
+                  <RevisionIndicator status="DEPLOYED" />
                 </div>
                 <div>
                   <p className="text-base font-semibold text-gray-900 dark:text-gray-100">
@@ -471,7 +471,7 @@ export const ConfigureAssistantDeploymentPage = () => {
                     className="w-6 h-6 text-violet-600 shrink-0"
                     strokeWidth={1.5}
                   />
-                  <RevisionIndicator status="DEPLOYED" size="small" />
+                  <RevisionIndicator status="DEPLOYED" />
                 </div>
                 <div>
                   <p className="text-base font-semibold text-gray-900 dark:text-gray-100">

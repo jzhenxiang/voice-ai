@@ -135,7 +135,6 @@ export function TryChatComplete(props: {
                 <InputVarForm key={idx} var={x}>
                   {x.getType() === InputVarType.textInput && (
                     <TextTextarea
-                      className="bg-light-background"
                       id={x.getName()}
                       {...register(x.getName(), {
                         required: 'Please provide a valid input.',

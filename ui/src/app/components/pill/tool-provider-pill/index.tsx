@@ -33,19 +33,20 @@ export const ToolProviderPill: FC<ToolProviderPillProps> = props => {
     <span
       onClick={props.onClick}
       className={cn(
-        'px-2 py-1 truncate',
-        'items-center bg-blue-400/10 dark:bg-blue-800/10 rounded-[2px]',
-        'ring-blue-500/30 dark:ring-blue-400/20 ring-[0.7px]',
-        'flex items-center justify-center w-fit',
+        'shrink-0 inline-flex items-center divide-x divide-blue-200 dark:divide-blue-700',
+        'bg-blue-100 dark:bg-blue-900/30 ring-[0.5px] ring-inset ring-blue-200 dark:ring-blue-700',
+        'text-sm text-blue-700 dark:text-blue-400 font-medium',
         props.className,
       )}
     >
-      <img
-        alt={currentTool?.getName()}
-        src={currentTool?.getImage()}
-        className="w-4 h-4 mr-1.5 inline-block"
-      />
-      <span className="font-medium opacity-80 ">{currentTool?.getName()}</span>
+      <span className="px-2.5 py-1 flex items-center">
+        <img
+          alt={currentTool?.getName()}
+          src={currentTool?.getImage()}
+          className="w-4 h-4 shrink-0"
+        />
+      </span>
+      <span className="px-2.5 py-1 truncate">{currentTool?.getName()}</span>
     </span>
   );
 };

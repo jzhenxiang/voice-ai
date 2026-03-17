@@ -33,18 +33,20 @@ export const ProviderPill: FC<ProviderPillProps> = props => {
     <span
       onClick={props.onClick}
       className={cn(
-        'inline-flex items-center gap-1.5 h-6 px-2 w-fit',
-        'bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700',
-        'text-xs text-gray-700 dark:text-gray-300',
+        'shrink-0 inline-flex items-center divide-x divide-gray-200 dark:divide-gray-700',
+        'bg-gray-100 dark:bg-gray-800/50 ring-[0.5px] ring-inset ring-gray-200 dark:ring-gray-700',
+        'text-sm text-gray-600 dark:text-gray-400 font-medium',
         props.className,
       )}
     >
-      <img
-        alt={currentProvider?.name}
-        src={currentProvider?.image}
-        className="w-3.5 h-3.5 shrink-0"
-      />
-      <span className="truncate">{currentProvider?.name}</span>
+      <span className="px-2.5 py-1 flex items-center">
+        <img
+          alt={currentProvider?.name}
+          src={currentProvider?.image}
+          className="w-4 h-4 shrink-0"
+        />
+      </span>
+      <span className="px-2.5 py-1 truncate">{currentProvider?.name}</span>
     </span>
   );
 };

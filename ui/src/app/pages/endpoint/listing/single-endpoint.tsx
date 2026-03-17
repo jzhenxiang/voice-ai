@@ -13,7 +13,7 @@ import { LabelCell } from '@/app/components/base/tables/label-cell';
 import { cn } from '@/utils';
 import { CustomLink } from '@/app/components/custom-link';
 import { TextCell } from '@/app/components/base/tables/text-cell';
-import { CopyCell } from '@/app/components/base/tables/copy-cell';
+import { VersionIndicator } from '@/app/components/indicators/version';
 import { TagCell } from '@/app/components/base/tables/tag-cell';
 import { useNavigate } from 'react-router-dom';
 import { ExternalLink } from 'lucide-react';
@@ -112,9 +112,11 @@ export const SingleEndpoint: FC<SingleEndpointProps> = ({ endpoint }) => {
         </TableCell>
       )}
       {endpointAction.visibleColumn('getVersion') && (
-        <CopyCell>{`vrsn_${endpoint
-          .getEndpointprovidermodel()
-          ?.getId()}`}</CopyCell>
+        <TableCell>
+          <VersionIndicator
+            id={endpoint.getEndpointprovidermodel()?.getId()!}
+          />
+        </TableCell>
       )}
       {endpointAction.visibleColumn('getTags') && (
         <TagCell tags={endpoint.getEndpointtag()?.getTagList()} />

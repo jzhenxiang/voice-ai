@@ -353,7 +353,6 @@ export function Conversations({ currentAssistant }: ConversationProps) {
                     <TableCell className="truncate max-w-20">
                       <ConversationDirectionIndicator
                         direction={row.getDirection() || 'inbound'}
-                        source={row.getSource()}
                       />
                     </TableCell>
                   )}

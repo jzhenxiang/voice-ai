@@ -1,7 +1,8 @@
 import { cn } from '@/utils';
 import React, { useState } from 'react';
 
-interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+interface TextAreaProps
+  extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   row?: number;
   wrapperClassName?: string;
 }
@@ -100,33 +101,35 @@ export const ScalableTextarea = React.forwardRef<
 });
 
 /** Inline paragraph input — transparent wrapper, no border. Used in variable editors. */
-export const ParagraphTextarea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
-  (attr, ref) => (
-    <ScalableTextarea
-      ref={ref}
-      placeholder="Enter variable value..."
-      spellCheck="false"
-      className="form-input px-2"
-      wrapperClassName="border-transparent! outline-hidden! bg-transparent p-0"
-      {...attr}
-      required
-    />
-  ),
-);
+export const ParagraphTextarea = React.forwardRef<
+  HTMLTextAreaElement,
+  TextAreaProps
+>((attr, ref) => (
+  <ScalableTextarea
+    ref={ref}
+    placeholder="Enter variable value..."
+    spellCheck="false"
+    className="form-input p-2"
+    wrapperClassName="border-transparent! outline-hidden! bg-transparent p-0"
+    {...attr}
+    required
+  />
+));
 
-export const NumberTextarea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
-  (attr, ref) => (
-    <ScalableTextarea
-      ref={ref}
-      placeholder="Enter variable value..."
-      spellCheck="false"
-      className="form-input px-2"
-      wrapperClassName="border-transparent! outline-hidden! bg-transparent p-0"
-      {...attr}
-      required
-    />
-  ),
-);
+export const NumberTextarea = React.forwardRef<
+  HTMLTextAreaElement,
+  TextAreaProps
+>((attr, ref) => (
+  <ScalableTextarea
+    ref={ref}
+    placeholder="Enter variable value..."
+    spellCheck="false"
+    className="form-input p-2"
+    wrapperClassName="border-transparent! outline-hidden! bg-transparent p-0"
+    {...attr}
+    required
+  />
+));
 
 export const UrlTextarea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
   (attr, ref) => (
@@ -134,7 +137,7 @@ export const UrlTextarea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
       ref={ref}
       placeholder="Enter variable value..."
       spellCheck="false"
-      className="form-input px-2"
+      className="form-input p-2"
       wrapperClassName="border-transparent! outline-hidden! bg-transparent p-0"
       {...attr}
       required
@@ -142,30 +145,32 @@ export const UrlTextarea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
   ),
 );
 
-export const TextTextarea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
-  (attr, ref) => (
-    <ScalableTextarea
-      ref={ref}
-      placeholder="Enter variable value..."
-      spellCheck="false"
-      className="form-input"
-      wrapperClassName="p-0 border-transparent! outline-hidden! bg-transparent"
-      {...attr}
-      required
-    />
-  ),
-);
+export const TextTextarea = React.forwardRef<
+  HTMLTextAreaElement,
+  TextAreaProps
+>((attr, ref) => (
+  <ScalableTextarea
+    ref={ref}
+    placeholder="Enter variable value..."
+    spellCheck="false"
+    className="form-input p-2"
+    wrapperClassName="p-0 border-transparent! outline-hidden! bg-transparent"
+    {...attr}
+    required
+  />
+));
 
-export const JsonTextarea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
-  (attr, ref) => (
-    <ScalableTextarea
-      ref={ref}
-      placeholder="Enter variable value..."
-      spellCheck="false"
-      className="form-input"
-      wrapperClassName="p-0 border-transparent! outline-hidden! bg-transparent"
-      {...attr}
-      required
-    />
-  ),
-);
+export const JsonTextarea = React.forwardRef<
+  HTMLTextAreaElement,
+  TextAreaProps
+>((attr, ref) => (
+  <ScalableTextarea
+    ref={ref}
+    placeholder="Enter variable value..."
+    spellCheck="false"
+    className="form-input p-2"
+    wrapperClassName="p-0 border-transparent! outline-hidden! bg-transparent"
+    {...attr}
+    required
+  />
+));

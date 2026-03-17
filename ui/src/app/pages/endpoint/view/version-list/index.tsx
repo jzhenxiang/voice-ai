@@ -6,13 +6,11 @@ import { useCurrentCredential } from '@/hooks/use-credential';
 import React, { useEffect } from 'react';
 import toast from 'react-hot-toast/headless';
 import { toHumanReadableRelativeTime } from '@/utils/date';
-import { TextImage } from '@/app/components/text-image';
-import { CopyButton } from '@/app/components/form/button/copy-button';
 import { RevisionIndicator } from '@/app/components/indicators/revision';
-import { Rocket, RotateCw } from 'lucide-react';
+import { VersionIndicator } from '@/app/components/indicators/version';
+import { RotateCw } from 'lucide-react';
 import { BluredWrapper } from '@/app/components/wrapper/blured-wrapper';
 import { YellowNoticeBlock } from '@/app/components/container/message/notice-block';
-import TooltipPlus from '@/app/components/base/tooltip-plus';
 import { ScrollableResizableTable } from '@/app/components/data-table';
 import { TableRow } from '@/app/components/base/tables/table-row';
 import { TableCell } from '@/app/components/base/tables/table-cell';
@@ -23,7 +21,6 @@ const TABLE_COLUMNS = [
   { name: 'Status', key: 'status' },
   { name: 'Created by', key: 'created_by' },
   { name: 'Date', key: 'date' },
-  { name: 'Action', key: 'action' },
 ];
 
 export function Version(props: {
@@ -116,34 +113,25 @@ export function Version(props: {
                 </TableCell>
 
                 <TableCell>
-                  <div className="inline-flex items-center border border-gray-200 dark:border-gray-700 shrink-0">
-                    <span className="px-2 py-0.5 font-mono text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                      vrsn_{epm.getId()}
-                    </span>
-                    <CopyButton className="border-l h-9 w-9 border-gray-200 dark:border-gray-700">
-                      {`vrsn_${epm.getId()}`}
-                    </CopyButton>
-                  </div>
+                  <VersionIndicator id={epm.getId()} />
                 </TableCell>
 
                 <TableCell>
                   <RevisionIndicator
-                    size="small"
                     status={isDeployed ? 'DEPLOYED' : 'NOT_DEPLOYED'}
+                    onClick={
+                      !isDeployed
+                        ? () => deployRevision(epm.getId())
+                        : undefined
+                    }
                   />
                 </TableCell>
 
                 <TableCell>
                   {epm.getCreateduser() && (
-                    <div className="flex items-center gap-1.5">
-                      <TextImage
-                        size={6}
-                        name={epm.getCreateduser()?.getName()!}
-                      />
-                      <span className=" text-gray-600 dark:text-gray-400">
-                        {epm.getCreateduser()?.getName()}
-                      </span>
-                    </div>
+                    <span className="text-gray-600 dark:text-gray-400">
+                      {epm.getCreateduser()?.getName()}
+                    </span>
                   )}
                 </TableCell>
 
@@ -152,28 +140,6 @@ export function Version(props: {
                     {epm.getCreateddate() &&
                       toHumanReadableRelativeTime(epm.getCreateddate()!)}
                   </span>
-                </TableCell>
-
-                <TableCell>
-                  {!isDeployed && (
-                    <div className="flex border border-gray-200 dark:border-gray-800 w-fit">
-                      <TooltipPlus
-                        className="bg-white dark:bg-gray-950 border-[0.5px] rounded-[2px] px-0 py-0"
-                        popupContent={
-                          <div className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400">
-                            Deploy this version
-                          </div>
-                        }
-                      >
-                        <IButton
-                          className="rounded-none"
-                          onClick={() => deployRevision(epm.getId())}
-                        >
-                          <Rocket strokeWidth={1.5} className="h-4 w-4" />
-                        </IButton>
-                      </TooltipPlus>
-                    </div>
-                  )}
                 </TableCell>
               </TableRow>
             );

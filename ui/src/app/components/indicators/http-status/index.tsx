@@ -65,7 +65,7 @@ export const HttpStatusSpanIndicator = ({
 
   return (
     <span
-      className={`inline-flex items-center rounded-[2px] ${config.bgColor} ${config.textColor} font-medium ${sizeClass.container} ring-[0.5px] ring-inset ${config.ringColor}`}
+      className={`shrink-0 inline-flex items-center ${config.bgColor} ${config.textColor} font-medium ${sizeClass.container} ring-none ring-inset ${config.ringColor}`}
     >
       <Icon
         className={`${config.iconColor}`}

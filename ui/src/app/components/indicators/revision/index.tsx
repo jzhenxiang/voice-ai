@@ -1,10 +1,11 @@
 import React, { FC } from 'react';
-import { Check, Clock, MinusCircle } from 'lucide-react';
+import { Check, Clock, Rocket } from 'lucide-react';
 
 export const RevisionIndicator: FC<{
   status: 'DEPLOYED' | 'NOT_DEPLOYED' | 'DEPLOYING';
   size?: 'small' | 'medium' | 'large';
-}> = ({ status, size = 'medium' }) => {
+  onClick?: () => void;
+}> = ({ status, size = 'medium', onClick }) => {
   const statusConfig = {
     DEPLOYED: {
       bgColor: 'bg-green-100 dark:bg-green-900/30',
@@ -19,8 +20,8 @@ export const RevisionIndicator: FC<{
       textColor: 'text-gray-700 dark:text-gray-500',
       iconColor: 'dark:text-gray-400',
       ringColor: 'ring-gray-200 dark:ring-gray-700',
-      Icon: MinusCircle,
-      display: 'Not in use',
+      Icon: Rocket,
+      display: 'Deploy',
     },
     DEPLOYING: {
       bgColor: 'bg-blue-100 dark:bg-blue-900/30',
@@ -35,7 +36,6 @@ export const RevisionIndicator: FC<{
   const config = statusConfig[status] || statusConfig['NOT_DEPLOYED'];
   const { Icon } = config;
 
-  // Size variants
   const sizeClasses = {
     small: {
       container: 'text-xs px-2 py-0.5 gap-1',
@@ -52,13 +52,17 @@ export const RevisionIndicator: FC<{
   };
 
   const sizeClass = sizeClasses[size] || sizeClasses.medium;
+  const clickable = onClick
+    ? 'group cursor-pointer hover:bg-primary! hover:text-white! hover:ring-primary!'
+    : '';
 
   return (
     <span
-      className={`shrink-0 inline-flex items-center ring-1 ${config.bgColor} ${config.textColor} font-medium ${sizeClass.container} ${config.ringColor}`}
+      className={`shrink-0 inline-flex items-center font-medium ${sizeClass.container} ${config.bgColor} ${config.textColor} ring-none ring-inset ${config.ringColor} ${clickable}`}
+      onClick={onClick}
     >
       <Icon
-        className={`${config.iconColor}`}
+        className={`${config.iconColor} ${onClick ? 'group-hover:text-white!' : ''}`}
         size={sizeClass.icon}
         strokeWidth={1.5}
       />

@@ -111,6 +111,9 @@ func (d *InboundDispatcher) HandleReceiveCall(c *gin.Context, provider string, a
 	if err != nil {
 		return "", fmt.Errorf("receive call failed: %w", err)
 	}
+	if callInfo == nil {
+		return "", nil
+	}
 
 	assistant, err := d.assistantService.Get(c, auth, assistantId, utils.GetVersionDefinition("latest"), &internal_services.GetAssistantOption{InjectPhoneDeployment: true})
 	if err != nil {

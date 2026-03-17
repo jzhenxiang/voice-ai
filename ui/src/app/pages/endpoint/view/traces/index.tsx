@@ -18,6 +18,7 @@ import { useEndpointLogPage } from '@/hooks/use-endpoint-log-page-store';
 import { Endpoint, EndpointLog } from '@rapidaai/react';
 import { SourceIndicator } from '@/app/components/indicators/source';
 import { StatusIndicator } from '@/app/components/indicators/status';
+import { VersionIndicator } from '@/app/components/indicators/version';
 import { toHumanReadableDateTime, toDateString } from '@/utils/date';
 import { getTimeTakenMetric, getTotalTokenMetric } from '@/utils/metadata';
 import { EndpointTraceModal } from '@/app/components/base/modal/endpoint-trace-modal';
@@ -171,19 +172,17 @@ export const SingleTrace: React.FC<SingleTraceProps> = ({
       )}
       {endpointAction.visibleColumn('version') && (
         <TableCell>
-          <span className="font-mono text-xs">
-            vrsn_{row.getEndpointprovidermodelid()}
-          </span>
+          <VersionIndicator id={row.getEndpointprovidermodelid()} />
         </TableCell>
       )}
       {endpointAction.visibleColumn('source') && (
         <TableCell>
-          <SourceIndicator source={row.getSource()} size="small" />
+          <SourceIndicator source={row.getSource()} />
         </TableCell>
       )}
       {endpointAction.visibleColumn('status') && (
         <TableCell>
-          <StatusIndicator state={row.getStatus()} size="small" />
+          <StatusIndicator state={row.getStatus()} />
         </TableCell>
       )}
       {endpointAction.visibleColumn('action') && (

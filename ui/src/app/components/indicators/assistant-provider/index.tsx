@@ -38,18 +38,24 @@ export const AssistantProviderIndicator: FC<{
     statusConfig['PROVIDER_MODEL'];
   const { Icon } = config;
 
-  // Size variants
+  const divideColor = config.ringColor
+    .replace(/ring-/g, 'divide-')
+    .replace('ring-inset', '');
+
   const sizeClasses = {
     small: {
-      container: 'text-xs px-2 py-0.5 gap-1',
+      container: 'text-xs',
+      padding: 'px-2 py-0.5',
       icon: 12,
     },
     medium: {
-      container: 'text-sm px-2.5 py-1 gap-1.5',
+      container: 'text-sm',
+      padding: 'px-2.5 py-1',
       icon: 16,
     },
     large: {
-      container: 'text-base px-3 py-1.5 gap-2',
+      container: 'text-base',
+      padding: 'px-2.5 py-1.5',
       icon: 18,
     },
   };
@@ -58,14 +64,16 @@ export const AssistantProviderIndicator: FC<{
 
   return (
     <span
-      className={`shrink-0 gap-3 inline-flex items-center rounded-[2px] ${config.bgColor} ${config.textColor} font-medium ${sizeClass.container} ring-[0.5px] ring-inset ${config.ringColor}`}
+      className={`shrink-0 inline-flex items-center divide-x ${divideColor} ${config.bgColor} ${config.textColor} font-medium ${sizeClass.container} ring-none ring-inset ${config.ringColor}`}
     >
-      <Icon
-        size={sizeClass.icon}
-        className={config.iconColor}
-        strokeWidth={1.5}
-      />
-      <span>{config.display}</span>
+      <span className={`${sizeClass.padding} flex items-center`}>
+        <Icon
+          size={sizeClass.icon}
+          className={config.iconColor}
+          strokeWidth={1.5}
+        />
+      </span>
+      <span className={sizeClass.padding}>{config.display}</span>
     </span>
   );
 };

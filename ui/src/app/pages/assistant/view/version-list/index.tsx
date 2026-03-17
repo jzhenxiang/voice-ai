@@ -1,4 +1,3 @@
-import { IBlueBorderButton } from '@/app/components/form/button';
 import { useAssistantProviderPageStore } from '@/hooks';
 import { useRapidaStore } from '@/hooks';
 import { useCredential } from '@/hooks/use-credential';
@@ -7,13 +6,12 @@ import toast from 'react-hot-toast/headless';
 import { Assistant, GetAllAssistantProviderResponse } from '@rapidaai/react';
 import { RevisionIndicator } from '@/app/components/indicators/revision';
 import { SectionLoader } from '@/app/components/loader/section-loader';
-import { Rocket, Upload } from 'lucide-react';
 import { TableSection } from '@/app/components/sections/table-section';
 import { ScrollableResizableTable } from '@/app/components/data-table';
 import { TableRow } from '@/app/components/base/tables/table-row';
 import { TableCell } from '@/app/components/base/tables/table-cell';
-import { CopyCell } from '@/app/components/base/tables/copy-cell';
 import { AssistantProviderIndicator } from '@/app/components/indicators/assistant-provider';
+import { VersionIndicator } from '@/app/components/indicators/version';
 import { DateCell } from '@/app/components/base/tables/date-cell';
 import { NameCell } from '@/app/components/base/tables/name-cell';
 
@@ -96,9 +94,9 @@ export function Version(props: VersionProps) {
               .AssistantproviderCase.ASSISTANTPROVIDERMODEL:
               return (
                 <TableRow key={idx} data-id={idx}>
-                  <CopyCell>
-                    {`vrsn_${apm.getAssistantprovidermodel()?.getId()}`}
-                  </CopyCell>
+                  <TableCell>
+                    <VersionIndicator id={apm.getAssistantprovidermodel()?.getId()!} />
+                  </TableCell>
                   <TableCell>
                     <AssistantProviderIndicator provider="provider-model" />
                   </TableCell>
@@ -108,38 +106,24 @@ export function Version(props: VersionProps) {
                       : 'Initial assistant version'}
                   </TableCell>
                   <TableCell>
-                    {assistantProviderAction.assistant?.getAssistantproviderid() !==
-                    apm.getAssistantprovidermodel()?.getId() ? (
-                      <IBlueBorderButton
-                        className="h-8 bg-primary/10 border-primary/30"
-                        disabled={
-                          assistantProviderAction.assistant?.getAssistantproviderid() ===
-                          apm.getAssistantprovidermodel()?.getId()
-                        }
-                        onClick={() => {
-                          deployRevision(
-                            'MODEL',
-                            apm.getAssistantprovidermodel()?.getId()!,
-                          );
-                        }}
-                      >
-                        <Rocket
-                          className="mr-1 w-3.5 h-3.5"
-                          strokeWidth={1.5}
-                        />
-                        Deploy
-                      </IBlueBorderButton>
-                    ) : (
-                      <RevisionIndicator
-                        size="small"
-                        status={
-                          assistantProviderAction.assistant?.getAssistantproviderid() ===
-                          apm.getAssistantprovidermodel()?.getId()
-                            ? 'DEPLOYED'
-                            : 'NOT_DEPLOYED'
-                        }
-                      />
-                    )}
+                    <RevisionIndicator
+                      status={
+                        assistantProviderAction.assistant?.getAssistantproviderid() ===
+                        apm.getAssistantprovidermodel()?.getId()
+                          ? 'DEPLOYED'
+                          : 'NOT_DEPLOYED'
+                      }
+                      onClick={
+                        assistantProviderAction.assistant?.getAssistantproviderid() !==
+                        apm.getAssistantprovidermodel()?.getId()
+                          ? () =>
+                              deployRevision(
+                                'MODEL',
+                                apm.getAssistantprovidermodel()?.getId()!,
+                              )
+                          : undefined
+                      }
+                    />
                   </TableCell>
                   <NameCell data-id={apm.getAssistantprovidermodel()?.getId()}>
                     {apm.getAssistantprovidermodel()?.getCreateduser() &&
@@ -157,9 +141,9 @@ export function Version(props: VersionProps) {
               .AssistantproviderCase.ASSISTANTPROVIDERAGENTKIT:
               return (
                 <TableRow key={idx} className="cursor-pointer" data-id={idx}>
-                  <CopyCell>
-                    {`vrsn_${apm.getAssistantprovideragentkit()?.getId()}`}
-                  </CopyCell>
+                  <TableCell>
+                    <VersionIndicator id={apm.getAssistantprovideragentkit()?.getId()!} />
+                  </TableCell>
                   <TableCell>
                     <AssistantProviderIndicator provider="agentkit" />
                   </TableCell>
@@ -169,40 +153,25 @@ export function Version(props: VersionProps) {
                       : 'Initial assistant version'}
                   </TableCell>
                   <TableCell>
-                    {assistantProviderAction.assistant?.getAssistantproviderid() !==
-                    apm.getAssistantprovideragentkit()?.getId() ? (
-                      <IBlueBorderButton
-                        className="h-8 bg-primary/10 border-primary/30"
-                        disabled={
-                          assistantProviderAction.assistant?.getAssistantproviderid() ===
-                          apm.getAssistantprovideragentkit()?.getId()
-                        }
-                        onClick={() => {
-                          deployRevision(
-                            'AGENTKIT',
-                            apm.getAssistantprovideragentkit()?.getId()!,
-                          );
-                        }}
-                      >
-                        <Rocket
-                          className="mr-1 w-3.5 h-3.5"
-                          strokeWidth={1.5}
-                        />
-                        Deploy
-                      </IBlueBorderButton>
-                    ) : (
-                      <RevisionIndicator
-                        size="small"
-                        status={
-                          assistantProviderAction.assistant?.getAssistantproviderid() ===
-                          apm.getAssistantprovideragentkit()?.getId()
-                            ? 'DEPLOYED'
-                            : 'NOT_DEPLOYED'
-                        }
-                      />
-                    )}
+                    <RevisionIndicator
+                      status={
+                        assistantProviderAction.assistant?.getAssistantproviderid() ===
+                        apm.getAssistantprovideragentkit()?.getId()
+                          ? 'DEPLOYED'
+                          : 'NOT_DEPLOYED'
+                      }
+                      onClick={
+                        assistantProviderAction.assistant?.getAssistantproviderid() !==
+                        apm.getAssistantprovideragentkit()?.getId()
+                          ? () =>
+                              deployRevision(
+                                'AGENTKIT',
+                                apm.getAssistantprovideragentkit()?.getId()!,
+                              )
+                          : undefined
+                      }
+                    />
                   </TableCell>
-
                   <NameCell>
                     {
                       apm
@@ -220,9 +189,9 @@ export function Version(props: VersionProps) {
               .AssistantproviderCase.ASSISTANTPROVIDERWEBSOCKET:
               return (
                 <TableRow key={idx}>
-                  <CopyCell>
-                    {`vrsn_${apm.getAssistantproviderwebsocket()?.getId()}`}
-                  </CopyCell>
+                  <TableCell>
+                    <VersionIndicator id={apm.getAssistantproviderwebsocket()?.getId()!} />
+                  </TableCell>
                   <TableCell>
                     <AssistantProviderIndicator provider="websocket" />
                   </TableCell>
@@ -232,38 +201,24 @@ export function Version(props: VersionProps) {
                       : 'Initial assistant version'}
                   </TableCell>
                   <TableCell>
-                    {assistantProviderAction.assistant?.getAssistantproviderid() !==
-                    apm.getAssistantproviderwebsocket()?.getId() ? (
-                      <IBlueBorderButton
-                        className="h-8 bg-primary/10 border-primary/30 rounded-[2px]"
-                        disabled={
-                          assistantProviderAction.assistant?.getAssistantproviderid() ===
-                          apm.getAssistantproviderwebsocket()?.getId()
-                        }
-                        onClick={() => {
-                          deployRevision(
-                            'WEBSOCKET',
-                            apm.getAssistantproviderwebsocket()?.getId()!,
-                          );
-                        }}
-                      >
-                        <Rocket
-                          className="mr-1 w-3.5 h-3.5"
-                          strokeWidth={1.5}
-                        />
-                        Deploy
-                      </IBlueBorderButton>
-                    ) : (
-                      <RevisionIndicator
-                        size="small"
-                        status={
-                          assistantProviderAction.assistant?.getAssistantproviderid() ===
-                          apm.getAssistantproviderwebsocket()?.getId()
-                            ? 'DEPLOYED'
-                            : 'NOT_DEPLOYED'
-                        }
-                      />
-                    )}
+                    <RevisionIndicator
+                      status={
+                        assistantProviderAction.assistant?.getAssistantproviderid() ===
+                        apm.getAssistantproviderwebsocket()?.getId()
+                          ? 'DEPLOYED'
+                          : 'NOT_DEPLOYED'
+                      }
+                      onClick={
+                        assistantProviderAction.assistant?.getAssistantproviderid() !==
+                        apm.getAssistantproviderwebsocket()?.getId()
+                          ? () =>
+                              deployRevision(
+                                'WEBSOCKET',
+                                apm.getAssistantproviderwebsocket()?.getId()!,
+                              )
+                          : undefined
+                      }
+                    />
                   </TableCell>
                   <NameCell>
                     {apm.getAssistantproviderwebsocket()?.getCreateduser() &&

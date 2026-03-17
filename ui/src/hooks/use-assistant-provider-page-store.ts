@@ -269,7 +269,7 @@ export const useAssistantProviderPageStore = create<AssistantProviderType>(
       { name: 'Version', key: 'version', visible: true },
       { name: 'Provider', key: 'provider', visible: true },
       { name: 'Change description', key: 'change_description', visible: true },
-      { name: 'Action', key: 'action', visible: true },
+      { name: 'Status', key: 'status', visible: true },
       { name: 'Created by', key: 'created_by', visible: true },
       { name: 'Created on', key: 'created_on', visible: true },
     ],

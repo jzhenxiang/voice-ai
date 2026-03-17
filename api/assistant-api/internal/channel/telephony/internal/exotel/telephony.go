@@ -200,7 +200,7 @@ func (tpc *exotelTelephony) ReceiveCall(c *gin.Context) (*internal_type.CallInfo
 	if ok {
 		response := map[string]string{"url": fmt.Sprintf("wss://%s/%s", tpc.appCfg.PublicAssistantHost, socketUrl)}
 		c.JSON(http.StatusOK, response)
-		return nil, fmt.Errorf("outbound call triggered")
+		return nil, nil
 	}
 
 	clientNumber, ok := queryParams["CallFrom"]
