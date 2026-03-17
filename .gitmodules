@@ -31,3 +31,6 @@
 [submodule "examples/golang"]
 	path = examples/golang
 	url = git@github.com:rapidaai/rapida-go-recipes.git
+[submodule "examples/widget"]
+	path = examples/widget
+	url = git@github.com:rapidaai/rapida-widget-recipes
