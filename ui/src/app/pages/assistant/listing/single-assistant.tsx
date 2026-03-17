@@ -122,7 +122,7 @@ const DeploymentBadge: FC<{ source: string; tooltip: string }> = ({
       </div>
     }
   >
-    <SourceIndicator source={source} withLabel={false} size="small" />
+    <SourceIndicator source={source} withLabel={false} />
   </TooltipPlus>
 );
 

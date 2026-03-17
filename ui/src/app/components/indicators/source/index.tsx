@@ -155,12 +155,12 @@ export const SourceIndicator: React.FC<SourceIndicatorProps> = ({
   const sizeClasses = {
     small: {
       container: 'text-xs',
-      padding: 'px-2 py-0.5',
+      padding: 'px-2 py-1',
       icon: 12,
     },
     medium: {
       container: 'text-sm',
-      padding: 'px-2.5 py-1',
+      padding: 'px-2.5 py-1.5',
       icon: 16,
     },
     large: {
