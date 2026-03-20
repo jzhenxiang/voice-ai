@@ -1,0 +1,5 @@
+[
+  { "id": "gpt4o-transcribe", "name": "GPT-4o Transcribe" },
+  { "id": "gpt4o-mini-transcribe", "name": "GPT-4o mini Transcribe" },
+  { "id": "whisper", "name": "Whisper" }
+]

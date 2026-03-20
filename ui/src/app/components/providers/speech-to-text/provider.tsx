@@ -1,5 +1,8 @@
 import { Metadata } from '@rapidaai/react';
 import { ProviderComponentProps } from '@/app/components/providers';
+import { loadProviderConfig } from '@/providers/config-loader';
+import { getDefaultsFromConfig, validateFromConfig } from '@/providers/config-defaults';
+import { ConfigRenderer } from '@/app/components/providers/config-renderer';
 import {
   ConfigureAssemblyAISpeechToText,
   GetAssemblyAIDefaultOptions,
@@ -57,6 +60,8 @@ export const GetDefaultSpeechToTextIfInvalid = (
   provider: string,
   parameters: Metadata[],
 ) => {
+  const config = loadProviderConfig(provider);
+  if (config?.stt) return getDefaultsFromConfig(config, 'stt', parameters, provider);
   switch (provider) {
     case 'google-speech-service':
       return GetGoogleDefaultOptions(parameters);
@@ -87,6 +92,8 @@ export const ValidateSpeechToTextIfInvalid = (
   provider: string,
   parameters: Metadata[],
 ): string | undefined => {
+  const config = loadProviderConfig(provider);
+  if (config?.stt) return validateFromConfig(config, 'stt', provider, parameters);
   switch (provider) {
     case 'google-speech-service':
       return ValidateGoogleOptions(parameters);
@@ -169,6 +176,18 @@ export const SpeechToTextConfigComponent: FC<ProviderComponentProps> = ({
   parameters,
   onChangeParameter,
 }) => {
+  const config = loadProviderConfig(provider);
+  if (config?.stt) {
+    return (
+      <ConfigRenderer
+        provider={provider}
+        category="stt"
+        config={config.stt}
+        parameters={parameters}
+        onParameterChange={onChangeParameter}
+      />
+    );
+  }
   switch (provider) {
     case 'google-speech-service':
       return (

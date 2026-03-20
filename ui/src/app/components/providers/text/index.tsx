@@ -1,6 +1,9 @@
 import { Metadata, VaultCredential } from '@rapidaai/react';
 import { Dropdown } from '@/app/components/dropdown';
 import { ProviderComponentProps } from '@/app/components/providers';
+import { loadProviderConfig } from '@/providers/config-loader';
+import { getDefaultsFromConfig, validateFromConfig } from '@/providers/config-defaults';
+import { ConfigRenderer } from '@/app/components/providers/config-renderer';
 import { ConfigureAnthropicTextProviderModel } from '@/app/components/providers/text/anthropic';
 import {
   GetAnthropicTextProviderDefaultOptions,
@@ -48,6 +51,8 @@ export const GetDefaultTextProviderConfigIfInvalid = (
   provider: string,
   parameters: Metadata[],
 ): Metadata[] => {
+  const config = loadProviderConfig(provider);
+  if (config?.text) return getDefaultsFromConfig(config, 'text', parameters, provider);
   switch (provider) {
     case 'openai':
       return GetOpenaiTextProviderDefaultOptions(parameters);
@@ -76,6 +81,8 @@ export const ValidateTextProviderDefaultOptions = (
   provider: string,
   parameters: Metadata[],
 ): string | undefined => {
+  const config = loadProviderConfig(provider);
+  if (config?.text) return validateFromConfig(config, 'text', provider, parameters);
   switch (provider) {
     case 'openai':
       return ValidateOpenaiTextProviderDefaultOptions(parameters);
@@ -104,6 +111,18 @@ const TextProviderConfigComponent: FC<ProviderComponentProps> = ({
   parameters,
   onChangeParameter,
 }) => {
+  const config = loadProviderConfig(provider);
+  if (config?.text) {
+    return (
+      <ConfigRenderer
+        provider={provider}
+        category="text"
+        config={config.text}
+        parameters={parameters}
+        onParameterChange={onChangeParameter}
+      />
+    );
+  }
   switch (provider) {
     case 'openai':
       return (

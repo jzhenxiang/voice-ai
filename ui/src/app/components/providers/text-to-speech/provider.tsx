@@ -5,6 +5,9 @@
  */
 import { Metadata } from '@rapidaai/react';
 import { FC } from 'react';
+import { loadProviderConfig } from '@/providers/config-loader';
+import { getDefaultsFromConfig, validateFromConfig } from '@/providers/config-defaults';
+import { ConfigRenderer } from '@/app/components/providers/config-renderer';
 import {
   ConfigureAzureTextToSpeech,
   GetAzureDefaultOptions,
@@ -125,6 +128,8 @@ export const GetDefaultTextToSpeechIfInvalid = (
   provider: string,
   parameters: Metadata[],
 ): Metadata[] => {
+  const config = loadProviderConfig(provider);
+  if (config?.tts) return getDefaultsFromConfig(config, 'tts', parameters, provider);
   switch (provider) {
     case 'google-speech-service':
       return GetGoogleDefaultOptions(parameters);
@@ -167,6 +172,8 @@ export const ValidateTextToSpeechIfInvalid = (
   provider: string,
   parameters: Metadata[],
 ): string | undefined => {
+  const config = loadProviderConfig(provider);
+  if (config?.tts) return validateFromConfig(config, 'tts', provider, parameters);
   switch (provider) {
     case 'google-speech-service':
       return ValidateGoogleOptions(parameters);
@@ -210,6 +217,18 @@ export const TextToSpeechConfigComponent: FC<ProviderComponentProps> = ({
   parameters,
   onChangeParameter,
 }) => {
+  const config = loadProviderConfig(provider);
+  if (config?.tts) {
+    return (
+      <ConfigRenderer
+        provider={provider}
+        category="tts"
+        config={config.tts}
+        parameters={parameters}
+        onParameterChange={onChangeParameter}
+      />
+    );
+  }
   switch (provider) {
     case 'google-speech-service':
       return (
