@@ -2,25 +2,24 @@
   {
     "id": "latest_long",
     "name": "latest_long",
-    "regions": [
-      "global",
-      "asia-south1"
-    ],
     "config": {
       "parameters": [
         {
           "key": "listen.region",
           "label": "Region",
-          "type": "input",
-          "required": false,
-          "advanced": true,
-          "helpText": "Optional region hint for Google Speech-to-Text routing."
+          "type": "dropdown",
+          "required": true,
+          "default": "global",
+          "data": "speech-to-text-regions.json",
+          "valueField": "id",
+          "errorMessage": "Please select a valid region for speech to text."
         },
         {
           "key": "listen.language",
           "label": "Language",
           "type": "dropdown",
-          "required": false,
+          "required": true,
+          "default": "en-US",
           "data": "speech-to-text-language.json",
           "valueField": "code",
           "errorMessage": "Please provide a valid google language for speech to text."
@@ -42,25 +41,24 @@
   {
     "id": "telephony",
     "name": "telephony (only for phone call audio)",
-    "regions": [
-      "global",
-      "asia-south1"
-    ],
     "config": {
       "parameters": [
         {
           "key": "listen.region",
           "label": "Region",
-          "type": "input",
-          "required": false,
-          "advanced": true,
-          "helpText": "Optional region hint for Google Speech-to-Text routing."
+          "type": "dropdown",
+          "required": true,
+          "default": "global",
+          "data": "speech-to-text-regions.json",
+          "valueField": "id",
+          "errorMessage": "Please select a valid region for speech to text."
         },
         {
           "key": "listen.language",
           "label": "Language",
           "type": "dropdown",
-          "required": false,
+          "required": true,
+          "default": "en-US",
           "data": "speech-to-text-language.json",
           "valueField": "code",
           "errorMessage": "Please provide a valid google language for speech to text."

@@ -58,7 +58,7 @@
           "type": "input",
           "advanced": true,
           "required": false,
-          "default": "STOP!"
+          "default": ""
         },
         {
           "key": "model.presence_penalty",
@@ -162,7 +162,7 @@
           "type": "input",
           "advanced": true,
           "required": false,
-          "default": "STOP!"
+          "default": ""
         },
         {
           "key": "model.presence_penalty",
@@ -266,7 +266,7 @@
           "type": "input",
           "advanced": true,
           "required": false,
-          "default": "STOP!"
+          "default": ""
         },
         {
           "key": "model.presence_penalty",
@@ -370,7 +370,7 @@
           "type": "input",
           "advanced": true,
           "required": false,
-          "default": "STOP!"
+          "default": ""
         },
         {
           "key": "model.presence_penalty",
@@ -474,7 +474,7 @@
           "type": "input",
           "advanced": true,
           "required": false,
-          "default": "STOP!"
+          "default": ""
         },
         {
           "key": "model.presence_penalty",
@@ -578,7 +578,7 @@
           "type": "input",
           "advanced": true,
           "required": false,
-          "default": "STOP!"
+          "default": ""
         },
         {
           "key": "model.presence_penalty",

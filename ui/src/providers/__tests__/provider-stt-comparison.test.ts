@@ -283,15 +283,17 @@ describe('Google Speech Service STT — config vs original', () => {
   it('produces the same default keys and values', () => {
     const result = getDefaultsFromConfig(config, 'stt', [], 'google-speech-service');
     expect(findMeta(result, 'listen.threshold')).toBe('0.5');
-    expect(findMeta(result, 'listen.region')).toBeUndefined();
+    expect(findMeta(result, 'listen.region')).toBe('global');
     expect(findMeta(result, 'listen.model')).toBe('latest_long');
-    expect(findMeta(result, 'listen.language')).toBeUndefined();
+    expect(findMeta(result, 'listen.language')).toBe('en-US');
   });
 
   it('validates: valid options returns undefined', () => {
     const opts = [
       cred(),
       createMetadata('listen.model', 'latest_long'),
+      createMetadata('listen.region', 'global'),
+      createMetadata('listen.language', 'en-SG'),
     ];
     expect(validateFromConfig(config, 'stt', 'google-speech-service', opts)).toBeUndefined();
   });

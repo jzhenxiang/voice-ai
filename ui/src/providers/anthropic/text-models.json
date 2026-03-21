@@ -72,7 +72,7 @@
           "label": "Service Tier",
           "type": "select",
           "advanced": true,
-          "required": true,
+          "required": false,
           "default": "auto",
           "choices": [
             {
@@ -170,7 +170,7 @@
           "label": "Service Tier",
           "type": "select",
           "advanced": true,
-          "required": true,
+          "required": false,
           "default": "auto",
           "choices": [
             {
@@ -268,7 +268,7 @@
           "label": "Service Tier",
           "type": "select",
           "advanced": true,
-          "required": true,
+          "required": false,
           "default": "auto",
           "choices": [
             {
@@ -366,7 +366,7 @@
           "label": "Service Tier",
           "type": "select",
           "advanced": true,
-          "required": true,
+          "required": false,
           "default": "auto",
           "choices": [
             {
@@ -464,7 +464,7 @@
           "label": "Service Tier",
           "type": "select",
           "advanced": true,
-          "required": true,
+          "required": false,
           "default": "auto",
           "choices": [
             {
