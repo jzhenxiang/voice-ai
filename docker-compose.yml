@@ -3,7 +3,7 @@ services:
   postgres:
     platform: linux/amd64
     image: postgres:15-alpine
-    container_name: postgres
+    container_name: rapida__postgres
     environment:
       POSTGRES_USER: rapida_user
       POSTGRES_PASSWORD: rapida_db_password
@@ -26,7 +26,7 @@ services:
   redis:
     platform: linux/amd64
     image: redis:7-alpine
-    container_name: redis
+    container_name: rapida__redis
     ports:
       - "6379:6379"
     volumes:
@@ -44,7 +44,7 @@ services:
   nginx:
     platform: linux/amd64
     image: nginx:alpine
-    container_name: nginx
+    container_name: rapida__nginx
     ports:
       - "8080:8080"
     volumes:
@@ -68,7 +68,7 @@ services:
       dockerfile: docker/ui/Dockerfile
       args:
         EDITION: local
-    container_name: ui
+    container_name: rapida__ui
     ports:
       - "3000:3000"
     networks:
@@ -80,7 +80,7 @@ services:
     build:
       context: .
       dockerfile: docker/web-api/Dockerfile
-    container_name: web-api
+    container_name: rapida__web-api
     # ports:
     #   - "9001:9001"
     env_file:
@@ -111,7 +111,7 @@ services:
     build:
       context: .
       dockerfile: docker/assistant-api/Dockerfile
-    container_name: assistant-api
+    container_name: rapida__assistant-api
     ports:
       - "9007:9007"                          # WebSocket and REST API
       - "4573:4573"                          # AudioSocket for Asterisk integration
@@ -147,7 +147,7 @@ services:
     build:
       context: .
       dockerfile: docker/integration-api/Dockerfile
-    container_name: integration-api
+    container_name: rapida__integration-api
     ports:
       - "9004:9004"
     env_file:
@@ -179,7 +179,7 @@ services:
     build:
       context: .
       dockerfile: docker/endpoint-api/Dockerfile
-    container_name: endpoint-api
+    container_name: rapida__endpoint-api
     ports:
       - "9005:9005"
     env_file:
