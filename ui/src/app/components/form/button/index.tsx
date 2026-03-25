@@ -257,7 +257,7 @@ export function IBlueBorderPlusButton({ isLoading, ...props }: ButtonProps) {
         'h-10 px-4 justify-between gap-8',
         'bg-transparent border border-primary',
         'text-primary',
-        'hover:bg-primary hover:text-white',
+        'hover:bg-primary! hover:text-white',
         props.className,
       )}
     >

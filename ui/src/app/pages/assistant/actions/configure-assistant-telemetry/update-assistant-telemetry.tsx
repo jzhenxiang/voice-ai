@@ -12,28 +12,18 @@ import { connectionConfig } from '@/configs';
 import toast from 'react-hot-toast/headless';
 import {
   IBlueBGArrowButton,
-  IBlueBorderButton,
   ICancelButton,
-  IRedBorderButton,
 } from '@/app/components/form/button';
 import { FieldSet } from '@/app/components/form/fieldset';
-import { FormLabel } from '@/app/components/form-label';
-import { Select } from '@/app/components/form/select';
-import { Input } from '@/app/components/form/input';
 import { InputCheckbox } from '@/app/components/form/checkbox';
 import { InputHelper } from '@/app/components/input-helper';
-import { Plus, Trash2 } from 'lucide-react';
 import { useConfirmDialog } from '@/app/pages/assistant/actions/hooks/use-confirmation';
-import { TELEMETRY_PROVIDER } from '@/providers';
-
-const providerOptions = TELEMETRY_PROVIDER.map(p => ({
-  name: p.name,
-  value: p.code,
-}));
-
-const providerConfigByCode = new Map(
-  TELEMETRY_PROVIDER.map(p => [p.code, p.configurations ?? []]),
-);
+import { TelemetryProvider } from '@/app/components/providers/telemetry';
+import { PageActionButtonBlock } from '@/app/components/blocks/page-action-button-block';
+import {
+  GetDefaultTelemetryIfInvalid,
+  ValidateTelemetry,
+} from '@/app/components/providers/telemetry/provider';
 
 export const UpdateAssistantTelemetry: FC<{ assistantId: string }> = ({
   assistantId,
@@ -41,15 +31,13 @@ export const UpdateAssistantTelemetry: FC<{ assistantId: string }> = ({
   const navigator = useGlobalNavigation();
   const { telemetryId } = useParams();
   const { authId, token, projectId } = useCurrentCredential();
-  const { showLoader, hideLoader } = useRapidaStore();
+  const { loading, showLoader, hideLoader } = useRapidaStore();
   const { showDialog, ConfirmDialogComponent } = useConfirmDialog({});
 
-  const [providerType, setProviderType] = useState(
-    providerOptions[0]?.value || 'otlp_http',
-  );
+  const [provider, setProvider] = useState('');
+  const [parameters, setParameters] = useState<Metadata[]>([]);
   const [enabled, setEnabled] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
-  const [options, setOptions] = useState<{ key: string; value: string }[]>([]);
 
   useEffect(() => {
     if (!telemetryId) return;
@@ -69,13 +57,18 @@ export const UpdateAssistantTelemetry: FC<{ assistantId: string }> = ({
         const telemetry = response.getData();
         if (!telemetry) return;
 
-        setProviderType(telemetry.getProvidertype());
+        const loadedProvider = telemetry.getProvidertype();
+        setProvider(loadedProvider);
         setEnabled(telemetry.getEnabled());
-        setOptions(
-          telemetry.getOptionsList().map(opt => ({
-            key: opt.getKey(),
-            value: opt.getValue(),
-          })),
+
+        const loadedParams = telemetry.getOptionsList().map(opt => {
+          const m = new Metadata();
+          m.setKey(opt.getKey());
+          m.setValue(opt.getValue());
+          return m;
+        });
+        setParameters(
+          GetDefaultTelemetryIfInvalid(loadedProvider, loadedParams),
         );
       },
       {
@@ -86,74 +79,36 @@ export const UpdateAssistantTelemetry: FC<{ assistantId: string }> = ({
     );
   }, [assistantId, telemetryId, authId, token, projectId]);
 
-  const updateOption = (index: number, field: 'key' | 'value', value: string) => {
-    setOptions(prev =>
-      prev.map((opt, i) => (i === index ? { ...opt, [field]: value } : opt)),
+  const onChangeProvider = (providerCode: string) => {
+    setProvider(providerCode);
+    const credentialOnly = parameters.filter(
+      p => p.getKey() === 'rapida.credential_id',
     );
+    setParameters(GetDefaultTelemetryIfInvalid(providerCode, credentialOnly));
   };
 
-  const buildMetadata = (): Metadata[] => {
-    return options
-      .filter(opt => opt.key.trim() !== '' && opt.value.trim() !== '')
-      .map(opt => {
-        const m = new Metadata();
-        m.setKey(opt.key.trim());
-        m.setValue(opt.value.trim());
-        return m;
-      });
-  };
-
-  const validate = (): boolean => {
-    setErrorMessage('');
-
-    const nonEmpty = options.filter(
-      opt => opt.key.trim() !== '' || opt.value.trim() !== '',
-    );
-
-    const hasHalfEmpty = nonEmpty.some(
-      opt => opt.key.trim() === '' || opt.value.trim() === '',
-    );
-    if (hasHalfEmpty) {
-      setErrorMessage('Telemetry option key and value both are required.');
-      return false;
-    }
-
-    const keys = nonEmpty.map(opt => opt.key.trim().toLowerCase());
-    if (new Set(keys).size !== keys.length) {
-      setErrorMessage('Duplicate telemetry option keys are not allowed.');
-      return false;
-    }
-
-    const providerConfig = providerConfigByCode.get(providerType) || [];
-    const endpointRequired = providerConfig.some(
-      cfg => cfg.name === 'endpoint',
-    );
-
-    if (endpointRequired) {
-      const endpoint = nonEmpty.find(
-        opt => opt.key.trim().toLowerCase() === 'endpoint',
-      );
-      if (!endpoint || endpoint.value.trim() === '') {
-        setErrorMessage('This provider requires an `endpoint` option.');
-        return false;
-      }
-    }
-
-    return true;
+  const onChangeParameter = (params: Metadata[]) => {
+    setParameters(params);
   };
 
   const onSubmit = () => {
     if (!telemetryId) return;
-    if (!validate()) return;
+    setErrorMessage('');
+
+    const validationError = ValidateTelemetry(provider, parameters);
+    if (validationError) {
+      setErrorMessage(validationError);
+      return;
+    }
 
     showLoader();
     UpdateAssistantTelemetryProvider(
       connectionConfig,
       assistantId,
       telemetryId,
-      providerType,
+      provider,
       enabled,
-      buildMetadata(),
+      parameters,
       (err, response) => {
         hideLoader();
         if (err) {
@@ -186,104 +141,62 @@ export const UpdateAssistantTelemetry: FC<{ assistantId: string }> = ({
   return (
     <>
       <ConfirmDialogComponent />
-      <div className="h-full flex flex-col bg-white dark:bg-gray-900 overflow-auto">
-        <div className="px-8 pt-8 pb-6 max-w-4xl w-full flex flex-col gap-8">
-          <div className="space-y-2">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-              Update telemetry provider
-            </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Edit telemetry destination for this assistant.
-            </p>
-          </div>
+      <div className="flex flex-col flex-1 min-h-0 bg-white dark:bg-gray-900">
+        <header className="px-8 pt-8 pb-6 border-b border-gray-200 dark:border-gray-800 shrink-0">
+          <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-gray-500 dark:text-gray-400 mb-1.5">
+            Telemetry
+          </p>
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 leading-tight">
+            Update Telemetry Provider
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-500 mt-1.5 leading-relaxed">
+            Edit telemetry destination for this assistant.
+          </p>
+        </header>
 
-          <FieldSet>
-            <FormLabel>Provider type</FormLabel>
-            <Select
-              value={providerType}
-              onChange={e => setProviderType(e.target.value)}
-              options={providerOptions}
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="px-8 pt-6 pb-8 max-w-4xl flex flex-col gap-8">
+            <TelemetryProvider
+              provider={provider}
+              onChangeProvider={onChangeProvider}
+              parameters={parameters}
+              onChangeParameter={onChangeParameter}
             />
-          </FieldSet>
 
-          <FieldSet>
-            <InputCheckbox
-              checked={enabled}
-              onChange={e => setEnabled(e.target.checked)}
-            >
-              Enable this telemetry provider
-            </InputCheckbox>
-            <InputHelper>
-              Disabled providers are saved but not used by the assistant.
-            </InputHelper>
-          </FieldSet>
-
-          <FieldSet>
-            <div className="flex items-center justify-between">
-              <FormLabel>Options</FormLabel>
-              <IBlueBorderButton
-                className="!h-9"
-                type="button"
-                onClick={() => setOptions(prev => [...prev, { key: '', value: '' }])}
+            <FieldSet>
+              <InputCheckbox
+                checked={enabled}
+                onChange={e => setEnabled(e.target.checked)}
               >
-                Add option <Plus className="w-4 h-4" strokeWidth={1.5} />
-              </IBlueBorderButton>
-            </div>
-            <div className="border border-gray-200 dark:border-gray-800 divide-y divide-gray-200 dark:divide-gray-800">
-              {options.map((opt, index) => (
-                <div key={index} className="grid grid-cols-12">
-                  <div className="col-span-4 border-r border-gray-200 dark:border-gray-800">
-                    <Input
-                      value={opt.key}
-                      onChange={e => updateOption(index, 'key', e.target.value)}
-                      placeholder="key (e.g. endpoint)"
-                      className="border-none"
-                    />
-                  </div>
-                  <div className="col-span-7 border-r border-gray-200 dark:border-gray-800">
-                    <Input
-                      value={opt.value}
-                      onChange={e => updateOption(index, 'value', e.target.value)}
-                      placeholder="value"
-                      className="border-none"
-                    />
-                  </div>
-                  <div className="col-span-1 flex items-center justify-center">
-                    <IRedBorderButton
-                      className="border-none h-10"
-                      onClick={() =>
-                        setOptions(prev => prev.filter((_, i) => i !== index))
-                      }
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </IRedBorderButton>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <InputHelper>
-              Example keys: endpoint, headers, insecure, service_name.
-            </InputHelper>
-          </FieldSet>
+                Enable this telemetry provider
+              </InputCheckbox>
+              <InputHelper>
+                Disabled providers are saved but not used by the assistant.
+              </InputHelper>
+            </FieldSet>
+          </div>
+        </div>
 
-          {errorMessage && (
-            <div className="text-sm text-rose-600 dark:text-rose-400">
-              {errorMessage}
-            </div>
-          )}
-
-          <div className="flex items-center justify-end gap-3">
+        <PageActionButtonBlock errorMessage={errorMessage}>
+          <div className="flex-1 h-full flex">
             <ICancelButton
-              type="button"
+              className="w-full h-full"
               onClick={() => showDialog(navigator.goBack)}
             >
               Cancel
             </ICancelButton>
-            <IBlueBGArrowButton type="button" onClick={onSubmit}>
+          </div>
+          <div className="flex-1 h-full flex">
+            <IBlueBGArrowButton
+              type="button"
+              className="w-full h-full"
+              isLoading={loading}
+              onClick={onSubmit}
+            >
               Save telemetry
             </IBlueBGArrowButton>
           </div>
-        </div>
+        </PageActionButtonBlock>
       </div>
     </>
   );

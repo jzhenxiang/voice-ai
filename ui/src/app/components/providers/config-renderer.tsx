@@ -10,8 +10,12 @@ import { Select } from '@/app/components/form/select';
 import { Textarea } from '@/app/components/form/textarea';
 import { InputHelper } from '@/app/components/input-helper';
 import { Popover } from '@/app/components/popover';
-import { IButton } from '@/app/components/form/button';
-import { Bolt, X } from 'lucide-react';
+import {
+  IButton,
+  IBlueBorderButton,
+  IRedBorderButton,
+} from '@/app/components/form/button';
+import { Bolt, Plus, Trash2, X } from 'lucide-react';
 import { cn } from '@/utils';
 import {
   CategoryConfig,
@@ -31,7 +35,7 @@ const renderOption = (c: { name: string }) => (
 
 export const ConfigRenderer: React.FC<{
   provider: string;
-  category: 'stt' | 'tts' | 'text' | 'vad' | 'eos' | 'noise';
+  category: 'stt' | 'tts' | 'text' | 'vad' | 'eos' | 'noise' | 'telemetry';
   config: CategoryConfig;
   parameters: Metadata[] | null;
   onParameterChange: (parameters: Metadata[]) => void;
@@ -289,6 +293,17 @@ export const ConfigRenderer: React.FC<{
           </FieldSet>
         );
 
+      case 'key_value':
+        return (
+          <KeyValueField
+            key={param.key}
+            param={param}
+            value={getParamValue(param.key)}
+            onChange={value => updateParameter(param.key, value)}
+            colSpanClass={colSpanClass}
+          />
+        );
+
       default:
         return null;
     }
@@ -384,6 +399,93 @@ const DropdownField: React.FC<{
         />
       )}
       {param.helpText && <InputHelper>{param.helpText}</InputHelper>}
+    </FieldSet>
+  );
+};
+
+const KeyValueField: React.FC<{
+  param: ParameterConfig;
+  value: string;
+  onChange: (value: string) => void;
+  colSpanClass: string;
+}> = ({ param, value, onChange, colSpanClass }) => {
+  const parseEntries = (raw: string): { key: string; value: string }[] => {
+    if (!raw) return [];
+    return raw
+      .split(',')
+      .map(pair => {
+        const idx = pair.indexOf('=');
+        if (idx < 0) return { key: pair.trim(), value: '' };
+        return { key: pair.slice(0, idx).trim(), value: pair.slice(idx + 1).trim() };
+      })
+      .filter(e => e.key || e.value);
+  };
+
+  const serialize = (entries: { key: string; value: string }[]): string =>
+    entries.map(e => `${e.key}=${e.value}`).join(',');
+
+  const entries = parseEntries(value);
+
+  const updateEntry = (index: number, field: 'key' | 'value', val: string) => {
+    const next = [...entries];
+    next[index] = { ...next[index], [field]: val };
+    onChange(serialize(next));
+  };
+
+  const removeEntry = (index: number) => {
+    onChange(serialize(entries.filter((_, i) => i !== index)));
+  };
+
+  const addEntry = () => {
+    onChange(serialize([...entries, { key: '', value: '' }]));
+  };
+
+  return (
+    <FieldSet className={cn(colSpanClass)} key={param.key}>
+      <FormLabel>{param.label} ({entries.length})</FormLabel>
+      <div className="text-sm grid w-full">
+        {entries.map((entry, index) => (
+          <div
+            key={index}
+            className="grid grid-cols-2 border-b border-gray-200 dark:border-gray-700"
+          >
+            <div className="flex col-span-1 items-center border-r border-gray-200 dark:border-gray-700">
+              <Input
+                value={entry.key}
+                onChange={e => updateEntry(index, 'key', e.target.value)}
+                placeholder="Key"
+                className="w-full border-none"
+              />
+            </div>
+            <div className="col-span-1 flex">
+              <Input
+                value={entry.value}
+                onChange={e => updateEntry(index, 'value', e.target.value)}
+                placeholder="Value"
+                className="w-full border-none"
+              />
+              <IRedBorderButton
+                className="border-none outline-hidden dark:bg-gray-950 h-10"
+                onClick={() => removeEntry(index)}
+                type="button"
+              >
+                <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+              </IRedBorderButton>
+            </div>
+          </div>
+        ))}
+      </div>
+      <IBlueBorderButton
+        onClick={addEntry}
+        className="justify-between space-x-8"
+        type="button"
+      >
+        <span>Add {param.label.toLowerCase()}</span>
+        <Plus className="h-4 w-4 ml-1.5" />
+      </IBlueBorderButton>
+      {param.helpText && (
+        <InputHelper className="text-xs">{param.helpText}</InputHelper>
+      )}
     </FieldSet>
   );
 };

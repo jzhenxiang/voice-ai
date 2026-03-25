@@ -665,31 +665,22 @@
     },
     {
         "code": "otlp_http",
-        "name": "OTLP HTTP",
-        "description": "OpenTelemetry exporter over HTTP/protobuf.",
+        "name": "OTLP",
+        "description": "OpenTelemetry exporter (HTTP/protobuf or gRPC).",
         "featureList": [
-            "telemetry"
+            "telemetry",
+            "external"
         ],
         "configurations": [
             {
-                "name": "endpoint",
+                "name": "api_key",
                 "type": "string",
-                "label": "Endpoint"
-            }
-        ]
-    },
-    {
-        "code": "otlp_grpc",
-        "name": "OTLP gRPC",
-        "description": "OpenTelemetry exporter over gRPC.",
-        "featureList": [
-            "telemetry"
-        ],
-        "configurations": [
+                "label": "API Key"
+            },
             {
-                "name": "endpoint",
-                "type": "string",
-                "label": "Endpoint"
+                "name": "headers",
+                "type": "text",
+                "label": "Headers (key=value, one per line)"
             }
         ]
     },
@@ -698,13 +689,14 @@
         "name": "Datadog",
         "description": "Datadog tracing via OTLP-compatible collector.",
         "featureList": [
-            "telemetry"
+            "telemetry",
+            "external"
         ],
         "configurations": [
             {
-                "name": "endpoint",
+                "name": "api_key",
                 "type": "string",
-                "label": "Endpoint"
+                "label": "API Key (DD-API-KEY)"
             }
         ]
     },
@@ -713,13 +705,19 @@
         "name": "AWS X-Ray",
         "description": "AWS X-Ray tracing via ADOT Collector.",
         "featureList": [
-            "telemetry"
+            "telemetry",
+            "external"
         ],
         "configurations": [
             {
-                "name": "endpoint",
+                "name": "access_key_id",
                 "type": "string",
-                "label": "Endpoint"
+                "label": "AWS Access Key ID"
+            },
+            {
+                "name": "secret_access_key",
+                "type": "string",
+                "label": "AWS Secret Access Key"
             }
         ]
     },
@@ -728,13 +726,19 @@
         "name": "Google Trace",
         "description": "Google Cloud Trace via OTLP collector.",
         "featureList": [
-            "telemetry"
+            "telemetry",
+            "external"
         ],
         "configurations": [
             {
-                "name": "endpoint",
+                "name": "api_key",
                 "type": "string",
-                "label": "Endpoint"
+                "label": "API Key (x-goog-api-key)"
+            },
+            {
+                "name": "access_token",
+                "type": "string",
+                "label": "Access Token (OAuth2 Bearer)"
             }
         ]
     },
@@ -743,13 +747,14 @@
         "name": "Azure Monitor",
         "description": "Azure Monitor / Application Insights via OTLP.",
         "featureList": [
-            "telemetry"
+            "telemetry",
+            "external"
         ],
         "configurations": [
             {
-                "name": "endpoint",
+                "name": "api_key",
                 "type": "string",
-                "label": "Endpoint"
+                "label": "Instrumentation Key / API Key"
             }
         ]
     }
