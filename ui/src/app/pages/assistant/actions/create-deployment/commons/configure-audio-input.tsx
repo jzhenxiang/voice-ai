@@ -117,7 +117,7 @@ export const ConfigureAudioInputProvider: React.FC<
                 <EndOfSpeechProvider
                   provider={getParamValue(
                     'microphone.eos.provider',
-                    'silence_based_eos',
+                    'pipecat_smart_turn_eos',
                   )}
                   onChangeProvider={provider =>
                     onChangeAudioInputParameter(

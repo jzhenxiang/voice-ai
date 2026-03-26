@@ -118,7 +118,6 @@ func (listening *genericRequestor) initializeEndOfSpeech(ctx context.Context) er
 	if transformerConfig != nil {
 		options = utils.MergeMaps(options, transformerConfig.GetOptions())
 	}
-
 	endOfSpeech, err := internal_end_of_speech.GetEndOfSpeech(ctx,
 		listening.logger,
 		listening.OnPacket,
@@ -131,11 +130,26 @@ func (listening *genericRequestor) initializeEndOfSpeech(ctx context.Context) er
 	return nil
 }
 
+func (listening *genericRequestor) initializeInputNormalizer(ctx context.Context) error {
+	if err := listening.normalizer.Initialize(ctx, func(pkts ...internal_type.Packet) error {
+		return listening.OnPacket(ctx, pkts...)
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (listening *genericRequestor) disconnectEndOfSpeech(ctx context.Context) error {
 	if listening.endOfSpeech != nil {
 		if err := listening.endOfSpeech.Close(); err != nil {
 			listening.logger.Warnf("cancel end of speech with error %v", err)
 		}
+	}
+	if listening.normalizer != nil {
+		if err := listening.normalizer.Close(ctx); err != nil {
+			listening.logger.Warnf("cancel input normalizer with error %v", err)
+		}
+		listening.normalizer = nil
 	}
 	return nil
 }

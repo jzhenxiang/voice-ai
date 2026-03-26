@@ -37,6 +37,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/openai/openai-go v1.12.0
 	github.com/opensearch-project/opensearch-go/v2 v2.3.0
+	github.com/pemistahl/lingua-go v1.4.0
 	github.com/pion/interceptor v0.1.43
 	github.com/pion/rtp v1.10.0
 	github.com/pion/webrtc/v4 v4.2.3
@@ -184,6 +185,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rs/cors v1.7.0 // indirect
 	github.com/sendgrid/rest v2.6.9+incompatible // indirect
+	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/spf13/afero v1.10.0 // indirect
 	github.com/spf13/cast v1.7.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
@@ -213,6 +215,7 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/arch v0.18.0 // indirect
 	golang.org/x/crypto v0.47.0 // indirect
+	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1 // indirect
 	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
 	golang.org/x/time v0.14.0 // indirect

@@ -38,7 +38,7 @@ type SpeechSegment struct {
 	ContextID string
 	Text      string
 	Timestamp time.Time
-	Language  string
+	Chunks    []internal_type.SpeechToTextPacket
 }
 
 type command struct {
@@ -196,16 +196,14 @@ func (eos *PipecatEOS) Analyze(ctx context.Context, pkt internal_type.Packet) er
 			ContextID: p.ContextId(),
 			Timestamp: time.Now(),
 			Text:      eos.state.segment.Text,
-			Language:  eos.state.segment.Language,
+			Chunks:    append([]internal_type.SpeechToTextPacket(nil), eos.state.segment.Chunks...),
 		}
 		if newSeg.Text != "" {
 			newSeg.Text = fmt.Sprintf("%s %s", newSeg.Text, p.Script)
 		} else {
 			newSeg.Text = p.Script
 		}
-		if p.Language != "" {
-			newSeg.Language = p.Language
-		}
+		newSeg.Chunks = append(newSeg.Chunks, p)
 		eos.state.segment = newSeg
 		eos.mu.Unlock()
 
@@ -380,7 +378,11 @@ func (eos *PipecatEOS) fire(ctx context.Context, seg SpeechSegment) {
 	wordCount := len(strings.Fields(seg.Text))
 	triggerAt := time.Now()
 	_ = eos.callback(ctx,
-		internal_type.EndOfSpeechPacket{Speech: seg.Text, ContextID: seg.ContextID, Language: seg.Language},
+		internal_type.EndOfSpeechPacket{
+			Speech:    seg.Text,
+			ContextID: seg.ContextID,
+			Speechs:   append([]internal_type.SpeechToTextPacket(nil), seg.Chunks...),
+		},
 		internal_type.ConversationEventPacket{
 			Name: "eos",
 			Data: map[string]string{

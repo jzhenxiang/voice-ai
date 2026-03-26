@@ -25,6 +25,7 @@ import (
 	internal_assistant_entity "github.com/rapidaai/api/assistant-api/internal/entity/assistants"
 	internal_conversation_entity "github.com/rapidaai/api/assistant-api/internal/entity/conversations"
 	internal_knowledge_gorm "github.com/rapidaai/api/assistant-api/internal/entity/knowledges"
+	internal_input_normalizers "github.com/rapidaai/api/assistant-api/internal/normalizers/input"
 	observe "github.com/rapidaai/api/assistant-api/internal/observe"
 	observe_exporters "github.com/rapidaai/api/assistant-api/internal/observe/exporters"
 	internal_services "github.com/rapidaai/api/assistant-api/internal/services"
@@ -119,6 +120,7 @@ type genericRequestor struct {
 	endOfSpeech internal_type.EndOfSpeech
 	vad         internal_type.Vad
 	denoiser    internal_type.Denoiser
+	normalizer  internal_input_normalizers.InputNormalizer
 
 	// speak
 	textToSpeechTransformer internal_type.TextToSpeechTransformer
@@ -191,6 +193,7 @@ func NewGenericRequestor(
 		interactionState:  Unknown,
 		msgMode:           type_enums.TextMode,
 		assistantExecutor: internal_agent_executor_llm.NewAssistantExecutor(logger),
+		normalizer:        internal_input_normalizers.NewInputNormalizer(logger),
 
 		//
 		histories: make([]internal_type.MessagePacket, 0),

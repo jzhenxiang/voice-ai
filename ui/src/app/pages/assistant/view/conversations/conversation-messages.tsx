@@ -164,8 +164,6 @@ export const ConversationMessages: FC<{
 
       <ul className="divide-y divide-gray-200 dark:divide-gray-800">
         {conversations.map((x, idx) => {
-          const role = x.getRole().toLowerCase();
-          const isRapida = role === 'rapida';
           const visual = getRoleVisual(x.getRole());
           const telemetryTone =
             'border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300';
@@ -176,17 +174,6 @@ export const ConversationMessages: FC<{
               <div className="w-full">
                 <div className="bg-white dark:bg-gray-900">
                   <div className="px-4 py-2 flex items-center gap-2">
-                    {isRapida ? (
-                      <div className="h-7 w-7 shrink-0 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 flex items-center justify-center">
-                        <RapidaIcon className="h-3.5 w-3.5 text-blue-700 dark:text-blue-300" />
-                      </div>
-                    ) : (
-                      <div
-                        className={`h-7 w-7 shrink-0 border flex items-center justify-center text-xs font-semibold ${visual.toneClassName}`}
-                      >
-                        {visual.shortLabel}
-                      </div>
-                    )}
                     <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-700 dark:text-gray-300">
                       {visual.label}
                     </p>
@@ -195,7 +182,7 @@ export const ConversationMessages: FC<{
                     </p>
                   </div>
 
-                  <div className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 leading-relaxed [&_:is([data-link],a:link,a:visited,a:hover,a:active)]:text-current [&_:is([data-link],a:link,a:visited,a:hover,a:active):hover]:underline [&_:is(code,div[data-lang])]:font-mono [&_:is(code,div[data-lang])]:bg-black/10 dark:[&_:is(code,div[data-lang])]:bg-white/10 [&_:is(code,div[data-lang])]:rounded-[2px] [&_is:(code)]:p-0.5 [&_div[data-lang]]:p-2 [&_div[data-lang]]:overflow-auto [&_:is(p,ul,ol,dl,table,blockquote,div[data-lang],h4,h5,h6,hr):not(:first-child)]:mt-2 [&_:is(p,ul,ol,dl,table,blockquote,div[data-lang],h3,h4,h5,h6,hr):not(:last-child)]:mb-2 [&_:is(ul,ol)]:pl-5 [&_ul]:list-disc [&_ol]:list-decimal [&_:is(strong,h1,h2,h3,h4,h5,h6)]:font-semibold whitespace-pre-wrap break-words">
+                  <div className="px-4 pb-3 text-sm text-gray-900 dark:text-gray-100 leading-relaxed [&_:is([data-link],a:link,a:visited,a:hover,a:active)]:text-current [&_:is([data-link],a:link,a:visited,a:hover,a:active):hover]:underline [&_:is(code,div[data-lang])]:font-mono [&_:is(code,div[data-lang])]:bg-black/10 dark:[&_:is(code,div[data-lang])]:bg-white/10 [&_:is(code,div[data-lang])]:rounded-[2px] [&_is:(code)]:p-0.5 [&_div[data-lang]]:p-2 [&_div[data-lang]]:overflow-auto [&_:is(p,ul,ol,dl,table,blockquote,div[data-lang],h4,h5,h6,hr):not(:first-child)]:mt-2 [&_:is(p,ul,ol,dl,table,blockquote,div[data-lang],h3,h4,h5,h6,hr):not(:last-child)]:mb-2 [&_:is(ul,ol)]:pl-5 [&_ul]:list-disc [&_ol]:list-decimal [&_:is(strong,h1,h2,h3,h4,h5,h6)]:font-semibold whitespace-pre-wrap break-words">
                     {x.getBody() || '-'}
                   </div>
                   <div

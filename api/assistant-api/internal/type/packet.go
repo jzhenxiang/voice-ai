@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/rapidaai/pkg/types"
 	"github.com/rapidaai/protos"
 )
 
@@ -372,8 +373,8 @@ type EndOfSpeechPacket struct {
 
 	Speech string
 
-	// Language detected by the STT provider for this turn.
-	Language string
+	// speech chunks
+	Speechs []SpeechToTextPacket
 }
 
 func (f EndOfSpeechPacket) ContextId() string {
@@ -586,3 +587,16 @@ type ConversationEventPacket struct {
 }
 
 func (f ConversationEventPacket) ContextId() string { return f.ContextID }
+
+type NormalizedTextPacket struct {
+	// ContextID identifies the interaction turn. May be empty when emitted by
+	ContextID string
+
+	// text
+	Text string
+
+	// language
+	Language types.Language
+}
+
+func (f NormalizedTextPacket) ContextId() string { return f.ContextID }

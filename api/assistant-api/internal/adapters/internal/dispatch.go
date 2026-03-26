@@ -95,7 +95,8 @@ func (r *genericRequestor) OnPacket(ctx context.Context, pkts ...internal_type.P
 			internal_type.VadSpeechActivityPacket,
 			internal_type.SpeechToTextPacket,
 			internal_type.EndOfSpeechPacket,
-			internal_type.InterimEndOfSpeechPacket:
+			internal_type.InterimEndOfSpeechPacket,
+			internal_type.NormalizedTextPacket:
 			r.inputCh <- e
 
 		// Output — LLM generation, TTS, outbound pipeline
@@ -272,6 +273,8 @@ func (r *genericRequestor) dispatch(ctx context.Context, p internal_type.Packet)
 		r.handleInterimEndOfSpeech(ctx, vl)
 	case internal_type.EndOfSpeechPacket:
 		r.handleEndOfSpeech(ctx, vl)
+	case internal_type.NormalizedTextPacket:
+		r.handleNormalizedText(ctx, vl)
 	// Interruption
 	case internal_type.InterruptionPacket:
 		r.handleInterruption(ctx, vl)
@@ -338,7 +341,7 @@ func (talking *genericRequestor) handleUserText(ctx context.Context, vl internal
 	talking.handleInterruption(ctx, internal_type.InterruptionPacket{ContextID: talking.GetID(), Source: internal_type.InterruptionSourceWord})
 	vl.ContextID = talking.GetID()
 	if err := talking.callEndOfSpeech(ctx, vl); err != nil {
-		talking.OnPacket(ctx, internal_type.EndOfSpeechPacket{ContextID: vl.ContextID, Speech: vl.Text, Language: vl.Language})
+		talking.OnPacket(ctx, internal_type.EndOfSpeechPacket{ContextID: vl.ContextID, Speech: vl.Text})
 	}
 }
 
@@ -418,7 +421,11 @@ func (talking *genericRequestor) handleSpeechToText(ctx context.Context, vl inte
 	vl.ContextID = talking.GetID()
 	if err := talking.callEndOfSpeech(ctx, vl); err != nil {
 		if !vl.Interim {
-			talking.OnPacket(ctx, internal_type.EndOfSpeechPacket{ContextID: vl.ContextID, Speech: vl.Script, Language: vl.Language})
+			talking.OnPacket(ctx, internal_type.EndOfSpeechPacket{
+				ContextID: vl.ContextID,
+				Speech:    vl.Script,
+				Speechs:   []internal_type.SpeechToTextPacket{vl},
+			})
 		}
 	}
 }
@@ -433,6 +440,19 @@ func (talking *genericRequestor) handleInterimEndOfSpeech(ctx context.Context, v
 }
 
 func (talking *genericRequestor) handleEndOfSpeech(ctx context.Context, vl internal_type.EndOfSpeechPacket) {
+	if talking.normalizer != nil {
+		if err := talking.normalizer.Normalize(ctx, vl); err != nil {
+			talking.logger.Errorf("input normalizer error: %v", err)
+		}
+		return
+	}
+	talking.OnPacket(ctx, internal_type.NormalizedTextPacket{
+		ContextID: vl.ContextID,
+		Text:      vl.Speech,
+	})
+}
+
+func (talking *genericRequestor) handleNormalizedText(ctx context.Context, vl internal_type.NormalizedTextPacket) {
 	talking.stopIdleTimeoutTimer()
 	if err := talking.Transition(LLMGenerating); err != nil {
 		talking.logger.Errorf("messaging transition error: %v", err)
@@ -440,7 +460,7 @@ func (talking *genericRequestor) handleEndOfSpeech(ctx context.Context, vl inter
 	contextID := talking.GetID()
 	if err := talking.Notify(ctx, &protos.ConversationUserMessage{
 		Id:        contextID,
-		Message:   &protos.ConversationUserMessage_Text{Text: vl.Speech},
+		Message:   &protos.ConversationUserMessage_Text{Text: vl.Text},
 		Completed: true,
 		Time:      timestamppb.New(time.Now()),
 	}); err != nil {
@@ -448,8 +468,8 @@ func (talking *genericRequestor) handleEndOfSpeech(ctx context.Context, vl inter
 		return
 	}
 	talking.OnPacket(ctx,
-		internal_type.SaveMessagePacket{ContextID: contextID, MessageRole: "user", Text: vl.Speech, Language: vl.Language},
-		internal_type.ExecuteLLMPacket{ContextID: contextID, Input: vl.Speech, Language: vl.Language})
+		internal_type.SaveMessagePacket{ContextID: contextID, MessageRole: "user", Text: vl.Text, Language: vl.Language.ISO639_1},
+		internal_type.ExecuteLLMPacket{ContextID: contextID, Input: vl.Text, Language: vl.Language.ISO639_1})
 }
 
 // =============================================================================

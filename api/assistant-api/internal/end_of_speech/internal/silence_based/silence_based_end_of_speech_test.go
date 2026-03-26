@@ -286,8 +286,8 @@ func TestSTTLanguagePreservedInEndOfSpeechPacket(t *testing.T) {
 		if res.Speech != "hola" {
 			t.Fatalf("unexpected speech: %v", res.Speech)
 		}
-		if res.Language != "es-ES" {
-			t.Fatalf("unexpected language: %v", res.Language)
+		if len(res.Speechs) != 1 || res.Speechs[0].Script != "hola" || res.Speechs[0].Language != "es-ES" {
+			t.Fatalf("unexpected speech chunks: %+v", res.Speechs)
 		}
 	case <-time.After(500 * time.Millisecond):
 		t.Fatal("timeout waiting for callback")
@@ -330,8 +330,11 @@ func TestSTTLanguage_UsesLatestNonEmptyAcrossChunks(t *testing.T) {
 		if res.Speech != "hello bonjour hallo" {
 			t.Fatalf("unexpected speech: %v", res.Speech)
 		}
-		if res.Language != "de-DE" {
-			t.Fatalf("unexpected language: %v", res.Language)
+		if len(res.Speechs) != 3 {
+			t.Fatalf("expected 3 speech chunks, got %d", len(res.Speechs))
+		}
+		if res.Speechs[0].Script != "hello" || res.Speechs[1].Script != "bonjour" || res.Speechs[2].Script != "hallo" {
+			t.Fatalf("unexpected speech chunk scripts: %+v", res.Speechs)
 		}
 	case <-time.After(600 * time.Millisecond):
 		t.Fatal("timeout waiting for callback")
@@ -372,8 +375,11 @@ func TestSTTLanguage_LastChunkWithoutLanguageRetainsPrevious(t *testing.T) {
 		if res.Speech != "hola mundo" {
 			t.Fatalf("unexpected speech: %v", res.Speech)
 		}
-		if res.Language != "es-ES" {
-			t.Fatalf("unexpected language: %v", res.Language)
+		if len(res.Speechs) != 2 {
+			t.Fatalf("expected 2 speech chunks, got %d", len(res.Speechs))
+		}
+		if res.Speechs[0].Language != "es-ES" || res.Speechs[1].Language != "" {
+			t.Fatalf("unexpected speech chunk languages: %+v", res.Speechs)
 		}
 	case <-time.After(600 * time.Millisecond):
 		t.Fatal("timeout waiting for callback")

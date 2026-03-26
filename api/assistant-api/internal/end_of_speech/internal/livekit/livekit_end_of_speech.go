@@ -49,7 +49,7 @@ type SpeechSegment struct {
 	Committed string // accumulated final transcripts
 	Pending   string // latest interim transcript (not yet finalized)
 	Timestamp time.Time
-	Language  string
+	Chunks    []internal_type.SpeechToTextPacket
 }
 
 // FullText returns the complete transcript including any pending interim text.
@@ -241,16 +241,14 @@ func (eos *LivekitEOS) Analyze(ctx context.Context, pkt internal_type.Packet) er
 			ContextID: p.ContextId(),
 			Timestamp: time.Now(),
 			Committed: eos.state.segment.Committed,
-			Language:  eos.state.segment.Language,
+			Chunks:    append([]internal_type.SpeechToTextPacket(nil), eos.state.segment.Chunks...),
 		}
 		if newSeg.Committed != "" {
 			newSeg.Committed = fmt.Sprintf("%s %s", newSeg.Committed, p.Script)
 		} else {
 			newSeg.Committed = p.Script
 		}
-		if p.Language != "" {
-			newSeg.Language = p.Language
-		}
+		newSeg.Chunks = append(newSeg.Chunks, p)
 		eos.state.segment = newSeg
 		fullText := newSeg.FullText()
 		eos.mu.Unlock()
@@ -420,7 +418,11 @@ func (eos *LivekitEOS) fire(ctx context.Context, seg SpeechSegment) {
 	wordCount := len(strings.Fields(speech))
 	triggerAt := time.Now()
 	_ = eos.callback(ctx,
-		internal_type.EndOfSpeechPacket{Speech: speech, ContextID: seg.ContextID, Language: seg.Language},
+		internal_type.EndOfSpeechPacket{
+			Speech:    speech,
+			ContextID: seg.ContextID,
+			Speechs:   append([]internal_type.SpeechToTextPacket(nil), seg.Chunks...),
+		},
 		internal_type.ConversationEventPacket{
 			Name: "eos",
 			Data: map[string]string{

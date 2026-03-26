@@ -28,6 +28,7 @@ jest.mock('@/app/components/providers/end-of-speech/pipecat-smart-turn', () => (
 
 const { GetDefaultVADConfig } = require('@/app/components/providers/vad/provider');
 const { GetDefaultEOSConfig } = require('@/app/components/providers/end-of-speech/provider');
+const { GetDefaultMicrophoneConfig } = require('@/app/components/providers/speech-to-text/provider');
 const {
   GetDefaultNoiseCancellationConfig,
 } = require('@/app/components/providers/noise-removal/provider');
@@ -205,6 +206,13 @@ describe('Audio input advanced defaults parity', () => {
     );
 
     expect(getMetadataValue(updated, 'microphone.eos.provider')).toBe(
+      'pipecat_smart_turn_eos',
+    );
+  });
+
+  it('microphone defaults use pipecat eos provider', () => {
+    const defaults = GetDefaultMicrophoneConfig([]);
+    expect(getMetadataValue(defaults, 'microphone.eos.provider')).toBe(
       'pipecat_smart_turn_eos',
     );
   });

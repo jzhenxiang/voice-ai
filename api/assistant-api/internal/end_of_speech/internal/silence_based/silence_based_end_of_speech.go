@@ -21,7 +21,7 @@ import (
 type SpeechSegment struct {
 	ContextID string
 	Text      string
-	Language  string
+	Chunks    []internal_type.SpeechToTextPacket
 	Timestamp time.Time
 }
 
@@ -105,7 +105,7 @@ func (eos *SilenceBasedEOS) Analyze(ctx context.Context, pkt internal_type.Packe
 			return nil
 		}
 		eos.mu.Lock()
-		seg := SpeechSegment{ContextID: p.ContextId(), Text: p.Text, Language: p.Language, Timestamp: time.Now()}
+		seg := SpeechSegment{ContextID: p.ContextId(), Text: p.Text, Timestamp: time.Now()}
 		eos.state.segment = seg
 		eos.mu.Unlock()
 		eos.callback(ctx,
@@ -165,16 +165,14 @@ func (eos *SilenceBasedEOS) Analyze(ctx context.Context, pkt internal_type.Packe
 			ContextID: p.ContextId(),
 			Timestamp: time.Now(),
 			Text:      eos.state.segment.Text,
-			Language:  eos.state.segment.Language,
+			Chunks:    append([]internal_type.SpeechToTextPacket(nil), eos.state.segment.Chunks...),
 		}
 		if newSeg.Text != "" {
 			newSeg.Text = fmt.Sprintf("%s %s", eos.state.segment.Text, p.Script)
 		} else {
 			newSeg.Text = p.Script
 		}
-		if p.Language != "" {
-			newSeg.Language = p.Language
-		}
+		newSeg.Chunks = append(newSeg.Chunks, p)
 		eos.state.segment = newSeg
 		eos.mu.Unlock()
 
@@ -307,7 +305,11 @@ func (eos *SilenceBasedEOS) fire(ctx context.Context, seg SpeechSegment) {
 	wordCount := len(strings.Fields(seg.Text))
 	triggerAt := time.Now()
 	_ = eos.callback(ctx,
-		internal_type.EndOfSpeechPacket{Speech: seg.Text, ContextID: seg.ContextID, Language: seg.Language},
+		internal_type.EndOfSpeechPacket{
+			Speech:    seg.Text,
+			ContextID: seg.ContextID,
+			Speechs:   append([]internal_type.SpeechToTextPacket(nil), seg.Chunks...),
+		},
 		internal_type.ConversationEventPacket{
 			Name: "eos",
 			Data: map[string]string{

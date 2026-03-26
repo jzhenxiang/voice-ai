@@ -371,6 +371,12 @@ func (r *genericRequestor) initSessionBackground(ctx context.Context, isNew bool
 	})
 
 	utils.Go(ctx, func() {
+		if err := r.initializeInputNormalizer(ctx); err != nil {
+			r.logger.Tracef(ctx, "failed to initialize input normalizer: %+v", err)
+		}
+	})
+
+	utils.Go(ctx, func() {
 		if err := r.initializeEndOfSpeech(ctx); err != nil {
 			r.logger.Tracef(ctx, "failed to initialize input: %+v", err)
 		}

@@ -65,7 +65,7 @@ export const GetDefaultMicrophoneConfig = (
     },
     {
       key: 'microphone.eos.provider',
-      value: defaults?.['microphone.eos.provider'] ?? 'silence_based_eos',
+      value: defaults?.['microphone.eos.provider'] ?? 'pipecat_smart_turn_eos',
     },
     {
       key: 'microphone.denoising.provider',
