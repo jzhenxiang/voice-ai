@@ -96,7 +96,7 @@ export const AccountSetting = () => {
       onSubmit={handleSubmit(onChangePassword)}
     >
       <div className="overflow-auto flex flex-col flex-1">
-        <div className="px-8 pt-8 pb-12 flex flex-col gap-10 max-w-2xl">
+        <div className="px-4 pt-4 pb-12 flex flex-col gap-10 max-w-2xl">
           <div className="flex flex-col gap-6">
             <SectionDivider label="Account Information" />
             <FieldSet>
@@ -156,7 +156,7 @@ export const AccountSetting = () => {
               ></Input>
             </FieldSet>
           </div>
-          <div className=" flex-col gap-6">
+          <div className="flex-col gap-6">
             <IBlueBGArrowButton
               type="submit"
               form="account-settings-form"

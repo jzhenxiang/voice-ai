@@ -9,7 +9,7 @@ import { ChevronLeft } from 'lucide-react';
 export const AccountSettingPage = () => {
   const { goToDashboard } = useGlobalNavigation();
   return (
-    <div className="flex flex-col flex-1 bg-white dark:bg-gray-900">
+    <div className="flex flex-col flex-1 bg-white dark:bg-gray-900 h-full">
       <Helmet title="Account settings" />
       <PageHeaderBlock>
         <div className="flex items-center gap-1.5 min-w-0">
