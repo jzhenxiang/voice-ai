@@ -155,7 +155,7 @@ func (m *mockCommunication) GetOptions() utils.Option {
 	return nil
 }
 
-func (m *mockCommunication) Source() utils.RapidaSource {
+func (m *mockCommunication) GetSource() utils.RapidaSource {
 	if m.source == "" {
 		return utils.WebPlugin
 	}
@@ -193,7 +193,11 @@ func (m *noModeCommunication) GetOptions() utils.Option {
 	return nil
 }
 
-func (m *noModeCommunication) Source() utils.RapidaSource {
+func (m *noModeCommunication) GetMode() type_enums.MessageMode {
+	return ""
+}
+
+func (m *noModeCommunication) GetSource() utils.RapidaSource {
 	if m.source == "" {
 		return utils.WebPlugin
 	}
@@ -396,7 +400,7 @@ func TestBuildSessionArgumentationContext_IncludesMode(t *testing.T) {
 
 	session, ok := ctxMap["session"].(map[string]interface{})
 	require.True(t, ok)
-	assert.Equal(t, "audio", session["mode"])
+	assert.Equal(t, type_enums.AudioMode, session["mode"])
 }
 
 func TestRequestPipeline_ExecutesAllStages(t *testing.T) {
@@ -435,7 +439,7 @@ func TestResponsePipeline_ExecutesAllStages(t *testing.T) {
 		},
 		Metrics: []*protos.Metric{{Name: "tokens", Value: "1"}},
 	}
-	e.executeResponse(context.Background(), comm, resp)
+	e.handleResponse(context.Background(), comm, resp)
 
 	pkts := collector.all()
 	require.GreaterOrEqual(t, len(pkts), 3, "validate + build + emit stages should produce packets")
@@ -664,7 +668,7 @@ func TestHandleResponse_Error(t *testing.T) {
 		Success:   false,
 		Error:     &protos.Error{ErrorMessage: "rate limited"},
 	}
-	e.executeResponse(context.Background(), comm, resp)
+	e.handleResponse(context.Background(), comm, resp)
 
 	pkts := collector.all()
 	require.Len(t, pkts, 2)
@@ -689,7 +693,7 @@ func TestHandleResponse_NilOutput(t *testing.T) {
 		Success:   true,
 		Data:      nil,
 	}
-	e.executeResponse(context.Background(), comm, resp)
+	e.handleResponse(context.Background(), comm, resp)
 	assert.Empty(t, collector.all(), "nil output should emit no packets")
 }
 
@@ -712,7 +716,7 @@ func TestHandleResponse_StaleResponse_Dropped(t *testing.T) {
 		},
 		Metrics: []*protos.Metric{{Name: "tokens", Value: "1"}},
 	}
-	e.executeResponse(context.Background(), comm, resp)
+	e.handleResponse(context.Background(), comm, resp)
 	assert.Empty(t, collector.all(), "stale response should be ignored")
 	snap := historySnapshot(e)
 	require.Len(t, snap, 1)
@@ -887,7 +891,7 @@ func TestHandleResponse_FinalWithoutToolCalls(t *testing.T) {
 		},
 		Metrics: []*protos.Metric{{Name: "tokens", Value: "10"}},
 	}
-	e.executeResponse(context.Background(), comm, resp)
+	e.handleResponse(context.Background(), comm, resp)
 
 	pkts := collector.all()
 	require.Len(t, pkts, 3)
@@ -906,7 +910,7 @@ func TestHandleResponse_FinalWithoutToolCalls(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, "req-3", metric.ContextID)
 	require.Len(t, metric.Metrics, 1)
-	assert.Equal(t, "tokens", metric.Metrics[0].Name)
+	assert.Equal(t, "agent_tokens", metric.Metrics[0].Name)
 
 	// Verify history was updated
 	snapshot := historySnapshot(e)
@@ -942,7 +946,7 @@ func TestHandleResponse_FinalWithToolCalls(t *testing.T) {
 		},
 		Metrics: []*protos.Metric{{Name: "tokens", Value: "5"}},
 	}
-	e.executeResponse(context.Background(), comm, resp)
+	e.handleResponse(context.Background(), comm, resp)
 
 	pkts := collector.all()
 	// Should have: LLMResponseDonePacket, ConversationEventPacket(completed), AssistantMessageMetricPacket, LLMErrorPacket(tool call follow-up failed)
@@ -1009,7 +1013,7 @@ func TestHandleResponse_ToolFollowUpRetainsUserMessageContext(t *testing.T) {
 		},
 		Metrics: []*protos.Metric{{Name: "tokens", Value: "5"}},
 	}
-	e.executeResponse(context.Background(), comm, resp)
+	e.handleResponse(context.Background(), comm, resp)
 
 	stream.mu.Lock()
 	defer stream.mu.Unlock()
@@ -1040,7 +1044,7 @@ func TestHandleResponse_StreamDelta(t *testing.T) {
 		},
 		// No Metrics → streaming delta
 	}
-	e.executeResponse(context.Background(), comm, resp)
+	e.handleResponse(context.Background(), comm, resp)
 
 	pkts := collector.all()
 	require.Len(t, pkts, 2)
@@ -1432,7 +1436,7 @@ func TestHandleResponse_EmptyContents(t *testing.T) {
 			},
 		},
 	}
-	e.executeResponse(context.Background(), comm, resp)
+	e.handleResponse(context.Background(), comm, resp)
 	assert.Empty(t, collector.all(), "empty contents should emit no delta")
 }
 
@@ -1589,7 +1593,7 @@ func TestE2E_FullConversationTurn(t *testing.T) {
 	assert.Equal(t, "What is Go?", snap[0].GetUser().GetContent())
 
 	// 2. Simulate streaming deltas from LLM
-	e.executeResponse(context.Background(), comm, &protos.ChatResponse{
+	e.handleResponse(context.Background(), comm, &protos.ChatResponse{
 		RequestId: "turn-1",
 		Success:   true,
 		Data: &protos.Message{
@@ -1597,7 +1601,7 @@ func TestE2E_FullConversationTurn(t *testing.T) {
 			Message: &protos.Message_Assistant{Assistant: &protos.AssistantMessage{Contents: []string{"Go is"}}},
 		},
 	})
-	e.executeResponse(context.Background(), comm, &protos.ChatResponse{
+	e.handleResponse(context.Background(), comm, &protos.ChatResponse{
 		RequestId: "turn-1",
 		Success:   true,
 		Data: &protos.Message{
@@ -1607,7 +1611,7 @@ func TestE2E_FullConversationTurn(t *testing.T) {
 	})
 
 	// 3. Final response with metrics
-	e.executeResponse(context.Background(), comm, &protos.ChatResponse{
+	e.handleResponse(context.Background(), comm, &protos.ChatResponse{
 		RequestId: "turn-1",
 		Success:   true,
 		Data: &protos.Message{
@@ -1631,7 +1635,7 @@ func TestE2E_FullConversationTurn(t *testing.T) {
 	require.Len(t, dones, 1, "should have 1 done packet")
 	assert.Equal(t, "Go is a language", dones[0].Text)
 	require.Len(t, metrics, 1)
-	assert.Equal(t, "total_tokens", metrics[0].Metrics[0].Name)
+	assert.Equal(t, "agent_total_tokens", metrics[0].Metrics[0].Name)
 
 	// Verify event types in order
 	eventTypes := make([]string, 0, len(events))
@@ -1666,7 +1670,7 @@ func TestE2E_MultiTurnConversation(t *testing.T) {
 		require.NoError(t, err)
 
 		// LLM responds with final
-		e.executeResponse(context.Background(), comm, &protos.ChatResponse{
+		e.handleResponse(context.Background(), comm, &protos.ChatResponse{
 			RequestId: ctxID,
 			Success:   true,
 			Data: &protos.Message{
@@ -1717,7 +1721,7 @@ func TestE2E_ToolCallRoundTrip(t *testing.T) {
 	require.NoError(t, err)
 
 	// 2. LLM responds with tool call
-	e.executeResponse(context.Background(), comm, &protos.ChatResponse{
+	e.handleResponse(context.Background(), comm, &protos.ChatResponse{
 		RequestId: "tool-turn",
 		Success:   true,
 		Data: &protos.Message{
@@ -1765,7 +1769,7 @@ func TestE2E_InterruptDuringStreaming(t *testing.T) {
 	require.NoError(t, err)
 
 	// 2. Some deltas arrive
-	e.executeResponse(context.Background(), comm, &protos.ChatResponse{
+	e.handleResponse(context.Background(), comm, &protos.ChatResponse{
 		RequestId: "ctx-1",
 		Success:   true,
 		Data: &protos.Message{
@@ -1782,7 +1786,7 @@ func TestE2E_InterruptDuringStreaming(t *testing.T) {
 	// 4. Late response from old context — isStaleResponse returns false when
 	// currentPacket is nil (interrupt clears it), so the response passes through.
 	// This is by design: after interrupt, no context is "active" so nothing is "stale".
-	e.executeResponse(context.Background(), comm, &protos.ChatResponse{
+	e.handleResponse(context.Background(), comm, &protos.ChatResponse{
 		RequestId: "ctx-1",
 		Success:   true,
 		Data: &protos.Message{
@@ -1858,7 +1862,7 @@ func TestE2E_ListenProcessesResponsesAndExitsOnEOF(t *testing.T) {
 // =============================================================================
 
 // TestDeadlock_ExecuteAndResponseConcurrent verifies no deadlock when Execute
-// (which acquires mu for currentPacket + history) and executeResponse (which
+// (which acquires mu for currentPacket + history) and handleResponse (which
 // acquires mu for history append + stale check) run concurrently.
 func TestDeadlock_ExecuteAndResponseConcurrent(t *testing.T) {
 	e := newTestExecutor()
@@ -1887,7 +1891,7 @@ func TestDeadlock_ExecuteAndResponseConcurrent(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		for i := 0; i < 50; i++ {
-			e.executeResponse(ctx, comm, &protos.ChatResponse{
+			e.handleResponse(ctx, comm, &protos.ChatResponse{
 				RequestId: fmt.Sprintf("ctx-%d", i),
 				Success:   true,
 				Data: &protos.Message{
@@ -1909,7 +1913,7 @@ func TestDeadlock_ExecuteAndResponseConcurrent(t *testing.T) {
 	case <-done:
 		// success — no deadlock
 	case <-ctx.Done():
-		t.Fatal("DEADLOCK: Execute + executeResponse concurrent access timed out")
+		t.Fatal("DEADLOCK: Execute + handleResponse concurrent access timed out")
 	}
 }
 
@@ -2052,7 +2056,7 @@ func TestDeadlock_ToolCallWithConcurrentInterrupt(t *testing.T) {
 	// Tool call response in goroutine
 	go func() {
 		defer wg.Done()
-		e.executeResponse(ctx, comm, &protos.ChatResponse{
+		e.handleResponse(ctx, comm, &protos.ChatResponse{
 			RequestId: "ctx-tool-interrupt",
 			Success:   true,
 			Data: &protos.Message{
@@ -2171,7 +2175,7 @@ func TestConsistency_ToolCallAtomicAppend(t *testing.T) {
 		Language:  en,
 	})
 
-	e.executeResponse(context.Background(), comm, &protos.ChatResponse{
+	e.handleResponse(context.Background(), comm, &protos.ChatResponse{
 		RequestId: "atomic-test",
 		Success:   true,
 		Data: &protos.Message{
@@ -2219,7 +2223,7 @@ func TestConsistency_StaleContextDoesNotMutateHistory(t *testing.T) {
 	histBefore := len(historySnapshot(e))
 
 	// Late response from turn 1 — should be dropped
-	e.executeResponse(context.Background(), comm, &protos.ChatResponse{
+	e.handleResponse(context.Background(), comm, &protos.ChatResponse{
 		RequestId: "ctx-old",
 		Success:   true,
 		Data: &protos.Message{
@@ -2341,7 +2345,7 @@ func TestConcurrency_ExecuteAndInterruptRace(t *testing.T) {
 	// No assertion on final state — the point is no panic/race under -race flag.
 }
 
-// TestConcurrency_ResponseAndInterruptRace runs executeResponse and
+// TestConcurrency_ResponseAndInterruptRace runs handleResponse and
 // interruption concurrently to verify no race on history + currentPacket.
 func TestConcurrency_ResponseAndInterruptRace(t *testing.T) {
 	e := newTestExecutor()
@@ -2367,7 +2371,7 @@ func TestConcurrency_ResponseAndInterruptRace(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		for i := 0; i < 100; i++ {
-			e.executeResponse(context.Background(), comm, &protos.ChatResponse{
+			e.handleResponse(context.Background(), comm, &protos.ChatResponse{
 				RequestId: fmt.Sprintf("ctx-%d", i),
 				Success:   true,
 				Data: &protos.Message{
@@ -2428,7 +2432,7 @@ func TestConcurrency_ToolCallWithConcurrentExecute(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		for i := 0; i < 20; i++ {
-			e.executeResponse(context.Background(), comm, &protos.ChatResponse{
+			e.handleResponse(context.Background(), comm, &protos.ChatResponse{
 				RequestId: fmt.Sprintf("user-%d", i),
 				Success:   true,
 				Data: &protos.Message{

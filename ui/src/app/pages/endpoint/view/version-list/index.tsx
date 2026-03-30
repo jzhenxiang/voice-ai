@@ -191,7 +191,12 @@ export function Version(props: {
               epm.getId();
 
             return (
-              <TableRow key={idx} isSelected={selectedVersionId === epm.getId()}>
+              <TableRow
+                key={idx}
+                isSelected={selectedVersionId === epm.getId()}
+                onClick={() => !isDeployed && setSelectedVersionId(selectedVersionId === epm.getId() ? null : epm.getId())}
+                className={!isDeployed ? 'cursor-pointer' : ''}
+              >
                 <TableCell className="!w-12 !pr-0">
                   <RadioButton
                     id={`ep-version-select-${epm.getId()}`}

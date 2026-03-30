@@ -257,6 +257,8 @@ export function Version(props: VersionProps) {
               <TableRow
                 key={idx}
                 isSelected={selectedVersionId === data.id}
+                onClick={() => !isCurrent && setSelectedVersionId(selectedVersionId === data.id ? null : data.id)}
+                className={!isCurrent ? 'cursor-pointer' : ''}
               >
                 <TableCell className="!w-12 !pr-0">
                   <RadioButton

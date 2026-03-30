@@ -45,7 +45,7 @@ func (t *genericRequestor) Talk(_ context.Context, auth types.SimplePrinciple) e
 				completionMetrics := []*protos.Metric{
 					{
 						Name:        type_enums.STATUS.String(),
-						Value:       "completed",
+						Value:       type_enums.COMPLETE.String(),
 						Description: "Status of current conversation",
 					},
 					{

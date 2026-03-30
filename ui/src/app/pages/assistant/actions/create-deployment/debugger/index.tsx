@@ -86,7 +86,7 @@ const ConfigureAssistantDebuggerDeployment: FC<{ assistantId: string }> = ({
   const [activeTab, setActiveTab] = useState('experience');
   const [errorMessage, setErrorMessage] = useState('');
   const [isDeploying, setIsDeploying] = useState(false);
-  const [voiceInputEnable, setVoiceInputEnable] = useState(false);
+  const [voiceInputEnable, setVoiceInputEnable] = useState(true);
   const [voiceOutputEnable, setVoiceOutputEnable] = useState(true);
   const [success, setSuccess] = useState(false);
 
@@ -414,12 +414,14 @@ const ConfigureAssistantDebuggerDeployment: FC<{ assistantId: string }> = ({
                       className="relative group w-full text-left p-4 border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950/50 hover:bg-gray-50 dark:hover:bg-gray-900/60 transition-colors"
                     >
                       <CornerBorderOverlay className={voiceInputEnable ? 'opacity-100' : undefined} />
-                      <Checkbox
-                        id="voice-input-toggle"
-                        labelText="Enable voice input (Speech-to-Text)"
-                        checked={voiceInputEnable}
-                        onChange={(_, { checked }) => setVoiceInputEnable(checked)}
-                      />
+                      <div onClick={e => e.stopPropagation()}>
+                        <Checkbox
+                          id="voice-input-toggle"
+                          labelText="Enable voice input (Speech-to-Text)"
+                          checked={voiceInputEnable}
+                          onChange={(_, { checked }) => setVoiceInputEnable(checked)}
+                        />
+                      </div>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">
                         {voiceInputEnable
                           ? 'Voice input is currently enabled.'
@@ -467,12 +469,14 @@ const ConfigureAssistantDebuggerDeployment: FC<{ assistantId: string }> = ({
                       className="relative group w-full text-left p-4 border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950/50 hover:bg-gray-50 dark:hover:bg-gray-900/60 transition-colors"
                     >
                       <CornerBorderOverlay className={voiceOutputEnable ? 'opacity-100' : undefined} />
-                      <Checkbox
-                        id="voice-output-toggle"
-                        labelText="Enable voice output (Text-to-Speech)"
-                        checked={voiceOutputEnable}
-                        onChange={(_, { checked }) => setVoiceOutputEnable(checked)}
-                      />
+                      <div onClick={e => e.stopPropagation()}>
+                        <Checkbox
+                          id="voice-output-toggle"
+                          labelText="Enable voice output (Text-to-Speech)"
+                          checked={voiceOutputEnable}
+                          onChange={(_, { checked }) => setVoiceOutputEnable(checked)}
+                        />
+                      </div>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">
                         {voiceOutputEnable
                           ? 'Voice output is currently enabled.'

@@ -180,28 +180,41 @@ export const ConversationMessages: FC<{
                     {x.getBody() || '-'}
                   </div>
                   <div className="px-4 py-2 flex flex-wrap items-center gap-1.5">
-                    {x.getMetricsList()?.filter(m => m?.getKey).map((m, mi) => (
-                      <DefinitionTooltip
-                        key={mi}
-                        definition={`Metric: ${m.getKey()}\nValue: ${m.getValue()}`}
-                        openOnHover
-                      >
-                        <Tag size="sm" type="blue" className="!cursor-help">
-                          {m.getKey()}: {m.getValue()}
-                        </Tag>
-                      </DefinitionTooltip>
-                    ))}
-                    {x.getMetadataList()?.filter(m => m?.getKey).map((m, mi) => (
-                      <DefinitionTooltip
-                        key={`md-${mi}`}
-                        definition={`Metadata: ${m.getKey()}\nValue: ${m.getValue()}`}
-                        openOnHover
-                      >
-                        <Tag size="sm" type="cool-gray" className="!cursor-help">
-                          {m.getKey()}: {m.getValue()}
-                        </Tag>
-                      </DefinitionTooltip>
-                    ))}
+                    {x.getMetricsList()?.filter(m => m?.getKey).map((m, mi) => {
+                      const key = m.getKey?.() || m.getName?.() || '';
+                      const val = m.getValue?.() || '';
+                      const tagType = key.includes('latency') ? 'teal'
+                        : key.includes('turn') ? 'purple'
+                        : 'blue';
+                      const displayVal = key.includes('latency') ? `${val} ms` : val;
+                      return (
+                        <DefinitionTooltip
+                          key={mi}
+                          definition={`${key}: ${val}`}
+                          openOnHover
+                        >
+                          <Tag size="sm" type={tagType} className="!cursor-help">
+                            {key}: {displayVal}
+                          </Tag>
+                        </DefinitionTooltip>
+                      );
+                    })}
+                    {x.getMetadataList()?.filter(m => m?.getKey).map((m, mi) => {
+                      const key = m.getKey();
+                      const val = m.getValue();
+                      const tagType = key === 'language' || key === 'language_code' ? 'warm-gray' : 'cool-gray';
+                      return (
+                        <DefinitionTooltip
+                          key={`md-${mi}`}
+                          definition={`${key}: ${val}`}
+                          openOnHover
+                        >
+                          <Tag size="sm" type={tagType} className="!cursor-help">
+                            {key}: {val}
+                          </Tag>
+                        </DefinitionTooltip>
+                      );
+                    })}
                   </div>
                 </div>
               </div>

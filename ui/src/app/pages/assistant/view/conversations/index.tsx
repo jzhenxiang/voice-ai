@@ -37,8 +37,7 @@ import { Spinner } from '@/app/components/loader/spinner';
 import { useGlobalNavigation } from '@/hooks/use-global-navigator';
 import { TableCell } from '@/app/components/base/tables/table-cell';
 import { CustomLink } from '@/app/components/custom-link';
-import { getMetricValue } from '@/utils/metadata';
-import { formatNanoToReadableMinute } from '@/utils/date';
+import { getMetricValue, getConversationDuration } from '@/utils/metadata';
 import { ConversationDirectionIndicator } from '@/app/components/indicators/conversation-direction';
 import { CopyCell } from '@/app/components/base/tables/copy-cell';
 import { LabelCell } from '@/app/components/base/tables/label-cell';
@@ -271,10 +270,7 @@ export function Conversations({ currentAssistant }: ConversationProps) {
           </div>
 
           <div className="w-px self-stretch bg-gray-200 dark:bg-gray-800 shrink-0" />
-          <IButton
-            type="button"
-            onClick={() => setFilterOpen()}
-          >
+          <IButton type="button" onClick={() => setFilterOpen()}>
             <TooltipPlus
               className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 px-0 py-0"
               popupContent={
@@ -373,9 +369,7 @@ export function Conversations({ currentAssistant }: ConversationProps) {
                     'duration',
                   ) && (
                     <LabelCell>
-                      {formatNanoToReadableMinute(
-                        getMetricValue(row.getMetricsList(), 'TIME_TAKEN'),
-                      )}
+                      {getConversationDuration(row.getMetricsList())}
                     </LabelCell>
                   )}
                   <TableCell>
@@ -396,7 +390,10 @@ export function Conversations({ currentAssistant }: ConversationProps) {
                                 </div>
                               }
                             >
-                              <PhoneCall strokeWidth={1.5} className="h-4 w-4" />
+                              <PhoneCall
+                                strokeWidth={1.5}
+                                className="h-4 w-4"
+                              />
                             </TooltipPlus>
                           </IButton>
                           <div className="w-px self-stretch bg-gray-200 dark:bg-gray-800 shrink-0" />
@@ -405,7 +402,12 @@ export function Conversations({ currentAssistant }: ConversationProps) {
                       {CONFIG.workspace.features?.telemetry !== false && (
                         <>
                           <IButton
-                            onClick={() => handleTraceClick(row.getAssistantid(), row.getId())}
+                            onClick={() =>
+                              handleTraceClick(
+                                row.getAssistantid(),
+                                row.getId(),
+                              )
+                            }
                           >
                             <TooltipPlus
                               className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 px-0 py-0"
@@ -415,7 +417,10 @@ export function Conversations({ currentAssistant }: ConversationProps) {
                                 </div>
                               }
                             >
-                              <Telescope strokeWidth={1.5} className="h-4 w-4" />
+                              <Telescope
+                                strokeWidth={1.5}
+                                className="h-4 w-4"
+                              />
                             </TooltipPlus>
                           </IButton>
                           <div className="w-px self-stretch bg-gray-200 dark:bg-gray-800 shrink-0" />

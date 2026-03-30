@@ -87,10 +87,10 @@ export const assistantNavSections: AssistantNavSection[] = [
         path: 'deployment',
         children: [
           { key: 'deployment-list', label: 'View all', path: 'deployment' },
+          { key: 'deployment-debugger', label: 'Add Debugger', path: 'deployment/debugger' },
           { key: 'deployment-web', label: 'Add Web Widget', path: 'deployment/web' },
           { key: 'deployment-api', label: 'Add SDK / API', path: 'deployment/api' },
           { key: 'deployment-call', label: 'Add Phone Call', path: 'deployment/call' },
-          { key: 'deployment-debugger', label: 'Add Debugger', path: 'deployment/debugger' },
         ],
       },
       {

@@ -175,6 +175,10 @@ export const ConfigureAssistantDeploymentPage = () => {
             />
             <MenuButton label="Add deployment" size="md" kind="primary">
               <MenuItem
+                label="Debugger"
+                onClick={() => navi.goToConfigureDebugger(assistantId!)}
+              />
+              <MenuItem
                 label="Web Widget"
                 onClick={() => navi.goToConfigureWeb(assistantId!)}
               />
@@ -185,10 +189,6 @@ export const ConfigureAssistantDeploymentPage = () => {
               <MenuItem
                 label="Phone Call"
                 onClick={() => navi.goToConfigureCall(assistantId!)}
-              />
-              <MenuItem
-                label="Debugger"
-                onClick={() => navi.goToConfigureDebugger(assistantId!)}
               />
             </MenuButton>
           </div>
@@ -321,6 +321,10 @@ export const ConfigureAssistantDeploymentPage = () => {
           />
           <MenuButton label="Add deployment" size="md" kind="primary">
             <MenuItem
+              label="Debugger"
+              onClick={() => navi.goToConfigureDebugger(assistantId!)}
+            />
+            <MenuItem
               label="Web Widget"
               onClick={() => navi.goToConfigureWeb(assistantId!)}
             />
@@ -331,10 +335,6 @@ export const ConfigureAssistantDeploymentPage = () => {
             <MenuItem
               label="Phone Call"
               onClick={() => navi.goToConfigureCall(assistantId!)}
-            />
-            <MenuItem
-              label="Debugger"
-              onClick={() => navi.goToConfigureDebugger(assistantId!)}
             />
           </MenuButton>
         </div>

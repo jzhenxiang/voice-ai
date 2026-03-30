@@ -1,9 +1,17 @@
-import { Assistant, AssistantConversationMessage } from '@rapidaai/react';
+import {
+  Assistant,
+  AssistantConversation,
+  AssistantConversationMessage,
+  ConnectionConfig,
+  GetAllAssistantConversation,
+} from '@rapidaai/react';
+import { connectionConfig } from '@/configs';
 import { toDate, toDateString } from '@/utils/date';
 import {
   getStatusMetric,
-  getTimeTakenMetric,
   getTotalTokenMetric,
+  findMetricByName,
+  isConversationCompleted,
 } from '@/utils/metadata';
 import {
   XAxis,
@@ -56,6 +64,7 @@ export const AssistantAnalytics: FC<{ assistant: Assistant }> = props => {
   const assistantTraceAction = useAssistantTracePageStore();
   const [autoRefreshInterval, setAutoRefreshInterval] = useState<null | number>(null);
   const [selectedRange, setSelectedRange] = useState<string>('last_30_days');
+  const [convList, setConvList] = useState<AssistantConversation[]>([]);
   const { authId, token, projectId } = useCurrentCredential();
 
   const getDateRangeCriteria = (range: string) => {
@@ -77,8 +86,37 @@ export const AssistantAnalytics: FC<{ assistant: Assistant }> = props => {
 
   useEffect(() => {
     fetchAssistantMessages();
+    fetchConversations();
   }, [props.assistant.getId(), projectId, selectedRange, JSON.stringify(assistantTraceAction.criteria), token, authId]);
 
+  const fetchAssistantMessages = () => {
+    assistantTraceAction.setPageSize(0);
+    assistantTraceAction.setFields(['metadata', 'metric']);
+    assistantTraceAction.addCriterias([getDateRangeCriteria(selectedRange)]);
+    assistantTraceAction.getAssistantMessages(props.assistant.getId(), projectId, token, authId, () => {}, () => {});
+  };
+
+  const fetchConversations = () => {
+    GetAllAssistantConversation(
+      connectionConfig,
+      props.assistant.getId(),
+      1,
+      0, // pageSize 0 = all
+      [],
+      (err, res) => {
+        if (res?.getSuccess()) setConvList(res.getDataList());
+      },
+      { authorization: token, 'x-auth-id': authId, 'x-project-id': projectId },
+    );
+  };
+
+  useEffect(() => {
+    let id: NodeJS.Timeout | null = null;
+    if (autoRefreshInterval && autoRefreshInterval > 0) id = setInterval(() => { fetchAssistantMessages(); fetchConversations(); }, autoRefreshInterval * 60 * 1000);
+    return () => { if (id) clearInterval(id); };
+  }, [autoRefreshInterval]);
+
+  // ── Derive conversation groups ──
   const conversationsMap = assistantTraceAction.assistantMessages.reduce((acc, message) => {
     const id = message.getAssistantconversationid();
     if (!acc.has(id)) acc.set(id, []);
@@ -90,41 +128,67 @@ export const AssistantAnalytics: FC<{ assistant: Assistant }> = props => {
   const totalSessions = conversations.length;
   const totalMessages = assistantTraceAction.assistantMessages.length;
 
-  const avgDuration = conversations.reduce((sum, conv) => {
-    const sorted = conv.sort((a, b) => toDate(a.getCreateddate()!).getTime() - toDate(b.getCreateddate()!).getTime());
-    return sum + (toDate(sorted[sorted.length - 1].getCreateddate()!).getTime() - toDate(sorted[0].getCreateddate()!).getTime()) / 1000;
-  }, 0) / totalSessions;
+  // ── Status: from fetched conversation list (conversation-level metrics) ──
+  const completedConversations = convList.filter(c =>
+    isConversationCompleted(c.getMetricsList?.() || []),
+  ).length;
 
-  const avgLatency = assistantTraceAction.assistantMessages.reduce((sum, m) => sum + getTimeTakenMetric(m.getMetricsList()), 0) / totalMessages;
+  const activeConversations = convList.length - completedConversations;
 
-  const successRate = (assistantTraceAction.assistantMessages.filter(m => getStatusMetric(m.getMetricsList()) === 'SUCCESS').length / totalMessages) * 100;
+  // ── Duration: from message-grouped conversations (message-level data) ──
+  const durations = conversations.map(conv => {
+    // Fallback: diff between first and last message timestamps
+    const sorted = [...conv].sort((a, b) => toDate(a.getCreateddate()!).getTime() - toDate(b.getCreateddate()!).getTime());
+    return (toDate(sorted[sorted.length - 1].getCreateddate()!).getTime() - toDate(sorted[0].getCreateddate()!).getTime()) / 1000;
+  });
+  const totalDuration = durations.reduce((sum, d) => sum + d, 0);
+  const avgDuration = totalSessions > 0 ? totalDuration / totalSessions : 0;
 
+  // ── Message-level metrics: STT & TTS latency ──
+  const sttLatencies: number[] = [];
+  const ttsLatencies: number[] = [];
+  assistantTraceAction.assistantMessages.forEach(m => {
+    const metrics = m.getMetricsList();
+    const stt = findMetricByName(metrics, 'stt_latency_ms');
+    if (stt) sttLatencies.push(Number(stt));
+    const tts = findMetricByName(metrics, 'tts_latency_ms');
+    if (tts) ttsLatencies.push(Number(tts));
+  });
+  const avgSttLatency = sttLatencies.length > 0 ? sttLatencies.reduce((a, b) => a + b, 0) / sttLatencies.length : 0;
+  const avgTtsLatency = ttsLatencies.length > 0 ? ttsLatencies.reduce((a, b) => a + b, 0) / ttsLatencies.length : 0;
+
+  // ── Token metrics ──
   const totalTokens = assistantTraceAction.assistantMessages.reduce((sum, m) => sum + getTotalTokenMetric(m.getMetricsList()), 0);
-  const tokenPerMessage = totalTokens / totalMessages;
 
-  const totalDuration = conversations.reduce((sum, conv) => {
-    const sorted = conv.sort((a, b) => toDate(a.getCreateddate()!).getTime() - toDate(b.getCreateddate()!).getTime());
-    return sum + (toDate(sorted[sorted.length - 1].getCreateddate()!).getTime() - toDate(sorted[0].getCreateddate()!).getTime()) / 1000;
-  }, 0);
+  // ── Language from user messages only ──
+  // Language metadata only exists on user messages (message ID starts with "user-")
+  const languageCounts: Record<string, number> = {};
+  let userMessageCount = 0;
+  assistantTraceAction.assistantMessages.forEach(item => {
+    const msgId = item.getMessageid?.() || '';
+    const role = item.getRole?.()?.toLowerCase() || '';
+    const isUser = msgId.startsWith('user-') || role === 'user';
+    if (!isUser) return;
+    userMessageCount++;
+    const lang = item.getMetadataList().find(m => m.getKey() === 'language')?.getValue();
+    if (lang) languageCounts[lang] = (languageCounts[lang] || 0) + 1;
+  });
+  const languageData = Object.entries(languageCounts).map(([language, count]) => ({
+    language,
+    count,
+    percentage: ((count / Math.max(userMessageCount, 1)) * 100).toFixed(1),
+  }));
 
-  const activeConversations = props.assistant.getAssistantconversationsList().length;
-
-  const languageData = Object.entries(
-    assistantTraceAction.assistantMessages.reduce((acc, item) => {
-      const lang = item.getMetadataList().find(m => m.getKey() === 'language')?.getValue() || 'Unknown';
-      acc[lang] = (acc[lang] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>),
-  ).map(([language, count]) => ({ language, count, percentage: ((count / totalMessages) * 100).toFixed(1) }));
-
+  // ── Source distribution ──
   const sourceData = Object.entries(
     assistantTraceAction.assistantMessages.reduce((acc, item) => {
       const source = item.getSource();
       acc[source] = (acc[source] || 0) + 1;
       return acc;
     }, {} as Record<string, number>),
-  ).map(([source, count]) => ({ source, count, percentage: ((count / totalMessages) * 100).toFixed(1) }));
+  ).map(([source, count]) => ({ source, count, percentage: ((count / Math.max(totalMessages, 1)) * 100).toFixed(1) }));
 
+  // ── Time-series buckets ──
   const activeSessionsData = (() => {
     const now = new Date();
     let interval: number;
@@ -140,27 +204,28 @@ export const AssistantAnalytics: FC<{ assistant: Assistant }> = props => {
       case 'last_7_days': startTime.setDate(startTime.getDate() - 7); break;
       default: startTime.setDate(startTime.getDate() - 30);
     }
-    const buckets: Array<{ date: Date; total: number; latency: number }> = [];
-    for (let t = startTime.getTime(); t < now.getTime(); t += interval * 60 * 1000) buckets.push({ date: new Date(t), total: 0, latency: 0 });
+    const buckets: Array<{ date: Date; total: number; sttMs: number; ttsMs: number; sttCount: number; ttsCount: number }> = [];
+    for (let t = startTime.getTime(); t < now.getTime(); t += interval * 60 * 1000)
+      buckets.push({ date: new Date(t), total: 0, sttMs: 0, ttsMs: 0, sttCount: 0, ttsCount: 0 });
+
     assistantTraceAction.assistantMessages.forEach(m => {
       const idx = Math.floor((toDate(m.getCreateddate()!).getTime() - startTime.getTime()) / (interval * 60 * 1000));
-      if (idx >= 0 && idx < buckets.length) { buckets[idx].total += 1; buckets[idx].latency += getTimeTakenMetric(m.getMetricsList()) / 1000000; }
+      if (idx >= 0 && idx < buckets.length) {
+        buckets[idx].total += 1;
+        const stt = findMetricByName(m.getMetricsList(), 'stt_latency_ms');
+        if (stt) { buckets[idx].sttMs += Number(stt); buckets[idx].sttCount += 1; }
+        const tts = findMetricByName(m.getMetricsList(), 'tts_latency_ms');
+        if (tts) { buckets[idx].ttsMs += Number(tts); buckets[idx].ttsCount += 1; }
+      }
     });
-    return buckets.map(b => ({ dateHour: formatLabel(b.date), total: b.total, latency: Math.round(b.latency / Math.max(1, b.total)), label: `From: ${b.date.toISOString().split('.')[0].replace('T', ' ')}` }));
+    return buckets.map(b => ({
+      dateHour: formatLabel(b.date),
+      total: b.total,
+      sttLatency: b.sttCount > 0 ? Math.round(b.sttMs / b.sttCount) : 0,
+      ttsLatency: b.ttsCount > 0 ? Math.round(b.ttsMs / b.ttsCount) : 0,
+      label: `From: ${b.date.toISOString().split('.')[0].replace('T', ' ')}`,
+    }));
   })();
-
-  const fetchAssistantMessages = () => {
-    assistantTraceAction.setPageSize(0);
-    assistantTraceAction.setFields(['metadata', 'metric']);
-    assistantTraceAction.addCriterias([getDateRangeCriteria(selectedRange)]);
-    assistantTraceAction.getAssistantMessages(props.assistant.getId(), projectId, token, authId, () => {}, () => {});
-  };
-
-  useEffect(() => {
-    let id: NodeJS.Timeout | null = null;
-    if (autoRefreshInterval && autoRefreshInterval > 0) id = setInterval(() => fetchAssistantMessages(), autoRefreshInterval * 60 * 1000);
-    return () => { if (id) clearInterval(id); };
-  }, [autoRefreshInterval]);
 
   return (
     <div className="w-full p-4 space-y-4">
@@ -199,18 +264,18 @@ export const AssistantAnalytics: FC<{ assistant: Assistant }> = props => {
 
       {/* ── Metric cards — top row ── */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-        <MetricCard label="Sessions" value={totalSessions} trend="up" status={totalSessions > 0 ? 'active' : 'inactive'} />
-        <MetricCard label="Active Conversations" value={activeConversations} trend="up" status={activeConversations > 0 ? 'active' : 'inactive'} />
-        <MetricCard label="Total Tokens" value={totalTokens} trend="up" status={totalTokens > 0 ? 'active' : 'inactive'} />
-        <MetricCard label="Total Duration" value={Math.round(totalDuration)} unit="s" status="active" />
-        <MetricCard label="Avg Latency" value={Math.round(avgLatency / 1000000)} unit="ms" trend={avgLatency / 1000000 > 2000 ? 'down' : 'up'} status={avgLatency / 1000000 > 2000 ? 'warning' : 'active'} />
-        <MetricCard label="Success Rate" value={Number(successRate.toFixed(1))} unit="%" trend="up" status={successRate > 90 ? 'active' : successRate > 50 ? 'warning' : 'inactive'} />
+        <MetricCard label="Sessions" value={totalSessions} status={totalSessions > 0 ? 'active' : 'inactive'} />
+        <MetricCard label="Active" value={activeConversations} status={activeConversations > 0 ? 'active' : 'inactive'} />
+        <MetricCard label="Completed" value={completedConversations} status={completedConversations > 0 ? 'active' : 'inactive'} />
+        <MetricCard label="Avg Duration" value={Math.round(avgDuration)} unit="s" status="active" />
+        <MetricCard label="Avg STT Latency" value={Math.round(avgSttLatency)} unit="ms" status={avgSttLatency > 2000 ? 'warning' : 'active'} />
+        <MetricCard label="Avg TTS Latency" value={Math.round(avgTtsLatency)} unit="ms" status={avgTtsLatency > 500 ? 'warning' : 'active'} />
       </div>
 
-      {/* ── Second row — gauge + sparkline + donut ── */}
+      {/* ── Second row — language + latency + source ── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Language gauge */}
-        <ChartTile title="Languages">
+        {/* Language gauge — user messages only */}
+        <ChartTile title="Languages" subtitle="User messages">
           <div className="flex flex-col items-center py-4">
             <div className="relative h-[140px] w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -228,9 +293,7 @@ export const AssistantAnalytics: FC<{ assistant: Assistant }> = props => {
                     stroke="none"
                   >
                     {languageData.length > 0
-                      ? languageData.map((_, i) => (
-                          <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                        ))
+                      ? languageData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)
                       : <Cell fill="#e0e0e0" />
                     }
                   </Pie>
@@ -253,35 +316,56 @@ export const AssistantAnalytics: FC<{ assistant: Assistant }> = props => {
           </div>
         </ChartTile>
 
-        {/* Latency sparkline */}
-        <ChartTile title="Latency">
-          <div className="flex items-center justify-between px-4 pt-2 pb-1">
-            <p className="text-2xl font-light tabular-nums">{Math.round(avgLatency / 1000000)} <span className="text-sm text-gray-500 uppercase">ms</span></p>
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
-            </span>
+        {/* STT & TTS Latency sparkline */}
+        <ChartTile title="STT / TTS Latency">
+          <div className="flex items-center gap-6 px-4 pt-2 pb-1">
+            <div>
+              <p className="text-[10px] text-gray-400 uppercase">STT</p>
+              <p className="text-xl font-light tabular-nums">{Math.round(avgSttLatency)} <span className="text-xs text-gray-500">ms</span></p>
+            </div>
+            <div>
+              <p className="text-[10px] text-gray-400 uppercase">TTS</p>
+              <p className="text-xl font-light tabular-nums">{Math.round(avgTtsLatency)} <span className="text-xs text-gray-500">ms</span></p>
+            </div>
           </div>
           <div className="h-[120px] px-2">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={activeSessionsData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="latencyGradient" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id="sttGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#f59e0b" stopOpacity={0.02} />
+                  </linearGradient>
+                  <linearGradient id="ttsGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="var(--cds-interactive, #1e40af)" stopOpacity={0.3} />
                     <stop offset="100%" stopColor="var(--cds-interactive, #1e40af)" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
-                <Area
-                  type="monotone"
-                  dataKey="latency"
-                  stroke="var(--cds-interactive, #1e40af)"
-                  strokeWidth={1.5}
-                  fill="url(#latencyGradient)"
-                  dot={false}
-                  activeDot={{ r: 3, fill: 'var(--cds-interactive, #1e40af)' }}
+                <Area type="monotone" dataKey="sttLatency" stroke="#f59e0b" strokeWidth={1.5} fill="url(#sttGradient)" dot={false} activeDot={{ r: 3 }} />
+                <Area type="monotone" dataKey="ttsLatency" stroke="var(--cds-interactive, #1e40af)" strokeWidth={1.5} fill="url(#ttsGradient)" dot={false} activeDot={{ r: 3 }} />
+                <Tooltip
+                  content={(({ active, payload }) => {
+                    if (!active || !payload?.length) return null;
+                    return (
+                      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-lg px-3 py-2 text-sm min-w-[140px]">
+                        <p className="text-gray-400 text-xs mb-1.5">{payload[0]?.payload?.label}</p>
+                        {payload.map((p: any) => (
+                          <div key={p.dataKey} className="flex items-center gap-2">
+                            <div className="w-2 h-2" style={{ backgroundColor: p.stroke }} />
+                            <span className="text-gray-600 dark:text-gray-300 uppercase text-xs">{p.dataKey === 'sttLatency' ? 'STT' : 'TTS'}</span>
+                            <span className="ml-auto font-semibold tabular-nums">{p.value} ms</span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  }) as ContentType<ValueType, NameType>}
                 />
               </AreaChart>
             </ResponsiveContainer>
+          </div>
+          <div className="flex justify-center gap-4 px-4 pb-3 text-xs">
+            <div className="flex items-center gap-1.5"><div className="w-3 h-0.5 bg-amber-500" /> STT</div>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-0.5 bg-blue-700" /> TTS</div>
           </div>
         </ChartTile>
 
@@ -307,7 +391,7 @@ export const AssistantAnalytics: FC<{ assistant: Assistant }> = props => {
                       <p className="text-gray-400 text-xs mb-1.5">{payload[0]?.payload?.label}</p>
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2" style={{ backgroundColor: 'var(--cds-interactive, #1e40af)' }} />
-                        <span className="text-gray-600 dark:text-gray-300">Sessions</span>
+                        <span className="text-gray-600 dark:text-gray-300">Messages</span>
                         <span className="ml-auto font-semibold tabular-nums">{payload[0]?.value}</span>
                       </div>
                     </div>
@@ -323,16 +407,16 @@ export const AssistantAnalytics: FC<{ assistant: Assistant }> = props => {
   );
 };
 
-// ─── Metric card (IBM Carbon dashboard pattern) ─────────────────────────────
+// ─── Metric card ────────────────────────────────────────────────────────────
 
-const MetricCard: FC<{ label: string; value: number; unit?: string; trend?: 'up' | 'down'; status?: 'active' | 'inactive' | 'warning' }> = ({
-  label, value, unit, trend, status = 'active',
+const MetricCard: FC<{ label: string; value: number; unit?: string; status?: 'active' | 'inactive' | 'warning' }> = ({
+  label, value, unit, status = 'active',
 }) => {
   const statusColor = status === 'active' ? 'bg-green-500' : status === 'warning' ? 'bg-yellow-500' : 'bg-gray-400';
   return (
     <Tile className="!rounded-none !p-4 border border-gray-200 dark:border-gray-800">
       <div className="flex items-center justify-between mb-3">
-        <h4 className="text-sm font-semibold">{label}</h4>
+        <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400">{label}</h4>
         <span className={cn('w-2 h-2 rounded-full shrink-0', statusColor)} />
       </div>
       <div className="flex items-baseline gap-1.5">
@@ -344,33 +428,28 @@ const MetricCard: FC<{ label: string; value: number; unit?: string; trend?: 'up'
             {unit}
           </span>
         )}
-        {trend && (
-          <span className={cn('text-sm font-semibold ml-1', trend === 'up' ? 'text-green-600' : 'text-red-500')}>
-            {trend === 'up' ? '↑' : '↓'}
-          </span>
-        )}
       </div>
     </Tile>
   );
 };
 
-// ─── Chart tile wrapper ──────────────────────────────────────────────────────
+// ─── Chart tile wrapper ─────────────────────────────────────────────────────
 
 const ChartTile: FC<{ title: string; subtitle?: string; className?: string; children: React.ReactNode }> = ({
   title, subtitle, className, children,
 }) => (
   <Tile className={cn('!rounded-none !p-0 border border-gray-200 dark:border-gray-800', className)}>
     <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-      <h3 className="text-base font-semibold">{title}</h3>
+      <h3 className="text-sm font-semibold">{title}</h3>
       {subtitle && (
-        <p className="text-xs text-gray-500 dark:text-gray-400">{subtitle}</p>
+        <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">{subtitle}</p>
       )}
     </div>
     {children}
   </Tile>
 );
 
-// ─── Donut chart content ─────────────────────────────────────────────────────
+// ─── Donut chart content ────────────────────────────────────────────────────
 
 const DonutContent: FC<{ data: any[]; dataKey: string; nameKey: string; total: number }> = ({
   data, dataKey, nameKey, total,

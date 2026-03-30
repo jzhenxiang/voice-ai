@@ -21,10 +21,7 @@ import { useCurrentCredential } from '@/hooks/use-credential';
 import { useAllProviderCredentials } from '@/hooks/use-model';
 import { ConfigPrompt } from '@/app/components/configuration/config-prompt';
 import { randomMeaningfullName, randomString } from '@/utils';
-import { FieldSet } from '@/app/components/form/fieldset';
-import { FormLabel } from '@/app/components/form-label';
-import { Input } from '@/app/components/form/input';
-import { Textarea } from '@/app/components/form/textarea';
+import { TextInput, TextArea, Stack } from '@/app/components/carbon/form';
 import { TagInput } from '@/app/components/form/tag-input';
 import { AssistantTag } from '@/app/components/form/tag-input/assistant-tags';
 import {
@@ -52,7 +49,6 @@ import { Struct } from 'google-protobuf/google/protobuf/struct_pb';
 import { connectionConfig } from '@/configs';
 import { ChatCompletePrompt } from '@/utils/prompt';
 import toast from 'react-hot-toast/headless';
-import { InputHelper } from '@/app/components/input-helper';
 import { ConfigureAssistantNextDialog } from '@/app/components/base/modal/assistant-configure-next-modal';
 import { SectionDivider } from '@/app/components/blocks/section-divider';
 import { CornerBorderOverlay } from '@/app/components/base/corner-border';
@@ -681,67 +677,34 @@ export function CreateAssistantPage() {
               </ButtonSet>,
             ],
             body: (
-              <div className="px-8 pt-8 pb-8 max-w-2xl flex flex-col gap-10">
-                {/* Identity section */}
-                <div className="flex flex-col gap-6">
-                  <SectionDivider label="Identity" />
-
-                  <FieldSet>
-                    <FormLabel
-                      htmlFor="agent_name"
-                      className="text-xs tracking-wide uppercase"
-                    >
-                      Name{' '}
-                      <span className="text-red-500 ml-0.5 normal-case">*</span>
-                    </FormLabel>
-                    <Input
-                      name="agent_name"
-                      onChange={e => {
-                        setName(e.target.value);
-                      }}
-                      value={name}
-                      placeholder="e.g. customer-support-assistant"
-                    />
-                    <InputHelper>
-                      Provide a name that will appear in the assistant list and
-                      help identify it.
-                    </InputHelper>
-                  </FieldSet>
-
-                  <FieldSet>
-                    <FormLabel
-                      htmlFor="description"
-                      className="text-xs tracking-wide uppercase"
-                    >
-                      Description (Optional)
-                    </FormLabel>
-                    <Textarea
-                      row={4}
-                      value={description}
-                      placeholder="What's the purpose of the assistant?"
-                      onChange={t => setDescription(t.target.value)}
-                    />
-                    <InputHelper>
-                      Provide a description to explain what this assistant is
-                      about.
-                    </InputHelper>
-                  </FieldSet>
-                </div>
-
-                {/* Labels section */}
-                <div className="flex flex-col gap-6">
-                  <SectionDivider label="Labels" />
+              <div className="px-8 pt-8 pb-8 max-w-2xl">
+                <Stack gap={7}>
+                  <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-gray-500 dark:text-gray-400">Identity</p>
+                  <TextInput
+                    id="agent-name"
+                    labelText="Name *"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    placeholder="e.g. customer-support-assistant"
+                    helperText="Provide a name that will appear in the assistant list and help identify it."
+                  />
+                  <TextArea
+                    id="agent-description"
+                    labelText="Description (Optional)"
+                    value={description}
+                    onChange={e => setDescription(e.target.value)}
+                    placeholder="What's the purpose of the assistant?"
+                    rows={4}
+                    helperText="Provide a description to explain what this assistant is about."
+                  />
+                  <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-gray-500 dark:text-gray-400">Labels</p>
                   <TagInput
                     tags={tags}
                     addTag={onAddTag}
                     removeTag={onRemoveTag}
                     allTags={AssistantTag}
                   />
-                  <InputHelper>
-                    Tags help you organize and filter assistants across your
-                    workspace.
-                  </InputHelper>
-                </div>
+                </Stack>
               </div>
             ),
           },

@@ -4,13 +4,14 @@ import (
 	"testing"
 
 	"github.com/rapidaai/pkg/commons"
+	"github.com/rapidaai/pkg/types"
 )
 
 func TestParse_EmptyInputDefaultsToEnglish(t *testing.T) {
 	logger, _ := commons.NewApplicationLogger()
 	parser := NewLinguaParser(logger)
 	res, confidence := parser.Parse("   ")
-	if res != nil {
+	if res.Name != types.UNKNOWN_LANGUAGE.Name {
 		t.Fatalf("expected no detection for empty input, got %+v", res)
 	}
 	if confidence != 0 {
@@ -22,7 +23,7 @@ func TestParse_English(t *testing.T) {
 	logger, _ := commons.NewApplicationLogger()
 	parser := NewLinguaParser(logger)
 	res, confidence := parser.Parse("Hello there, how are you doing today?")
-	if res == nil {
+	if res.Name == types.UNKNOWN_LANGUAGE.Name {
 		t.Fatalf("expected successful detection")
 	}
 	if res.ISO639_1 != "en" {
@@ -40,7 +41,7 @@ func TestParse_French(t *testing.T) {
 	logger, _ := commons.NewApplicationLogger()
 	parser := NewLinguaParser(logger)
 	res, _ := parser.Parse("Bonjour tout le monde, comment allez-vous?")
-	if res == nil {
+	if res.Name == types.UNKNOWN_LANGUAGE.Name {
 		t.Fatalf("expected successful detection")
 	}
 	if res.ISO639_1 != "fr" {
@@ -55,7 +56,7 @@ func TestParse_WithLowAccuracyMode(t *testing.T) {
 	logger, _ := commons.NewApplicationLogger()
 	parser := NewLinguaParser(logger)
 	res, _ := parser.Parse("Hola, esto es una prueba corta")
-	if res == nil {
+	if res.Name == types.UNKNOWN_LANGUAGE.Name {
 		t.Fatalf("expected successful detection")
 	}
 	if res.ISO639_1 == "" || res.ISO639_2 == "" || res.Name == "" {

@@ -216,7 +216,7 @@ func NewGenericRequestor(
 }
 
 // GetSource implements internal_adapter_requests.Messaging.
-func (dm *genericRequestor) Source() utils.RapidaSource {
+func (dm *genericRequestor) GetSource() utils.RapidaSource {
 	return dm.source
 }
 
@@ -233,7 +233,7 @@ func (gr *genericRequestor) GetAssistantConversation(ctx context.Context, auth t
 func (talking *genericRequestor) BeginConversation(ctx context.Context, assistant *internal_assistant_entity.Assistant, direction type_enums.ConversationDirection, config *protos.ConversationInitialization) (*internal_conversation_entity.AssistantConversation, error) {
 	talking.assistant = assistant
 
-	conversation, err := talking.conversationService.CreateConversation(ctx, talking.Auth(), talking.identifier(config), assistant.Id, assistant.AssistantProviderId, direction, talking.Source())
+	conversation, err := talking.conversationService.CreateConversation(ctx, talking.Auth(), talking.identifier(config), assistant.Id, assistant.AssistantProviderId, direction, talking.GetSource())
 	if err != nil {
 		return conversation, err
 	}

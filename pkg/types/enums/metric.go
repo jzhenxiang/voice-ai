@@ -28,3 +28,13 @@ var (
 func (m *MetricName) String() string {
 	return string(*m)
 }
+
+type MetricsValueType string
+
+var (
+	COMPLETE MetricsValueType = "complete"
+)
+
+func (m MetricsValueType) String() string {
+	return string(m)
+}
