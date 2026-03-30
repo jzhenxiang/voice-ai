@@ -38,6 +38,12 @@
 @use '@carbon/styles/scss/components/combo-button';
 @use '@carbon/styles/scss/components/menu-button';
 @use '@carbon/react/scss/components/ui-shell';
+@use '@carbon/react/scss/components/popover';
+
+// ─── Popover width override ─────────────────────────────────────────────────
+.cds--popover-content {
+  max-inline-size: none;
+}
 
 // ─── Light theme (default) ───────────────────────────────────────────────────
 :root {

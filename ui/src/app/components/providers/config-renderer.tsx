@@ -1,7 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Metadata } from '@rapidaai/react';
-import { Popover } from '@/app/components/popover';
-import { Settings, Close, Add, TrashCan } from '@carbon/icons-react';
+import { SettingsAdjust, Add, TrashCan } from '@carbon/icons-react';
+import {
+  PrimaryButton,
+  SecondaryButton,
+} from '@/app/components/carbon/button';
 import { cn } from '@/utils';
 import { TextInput, TextArea } from '@/app/components/carbon/form';
 import { TertiaryButton } from '@/app/components/carbon/button';
@@ -13,6 +16,11 @@ import {
   Button,
   Dropdown as CarbonDropdown,
   ComboBox,
+  ButtonSet,
+  ComposedModal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
 } from '@carbon/react';
 import {
   CategoryConfig,
@@ -31,8 +39,6 @@ export const ConfigRenderer: React.FC<{
   parameters: Metadata[] | null;
   onParameterChange: (parameters: Metadata[]) => void;
 }> = ({ provider, category, config, parameters, onParameterChange }) => {
-  const [advancedOpen, setAdvancedOpen] = useState(false);
-
   const effectiveParameters = useMemo(
     () =>
       resolveCategoryParameters(provider, category, config, parameters || []),
@@ -273,7 +279,75 @@ export const ConfigRenderer: React.FC<{
   if (category === 'text' && hasAdvanced) {
     const mainParam = regularParams[0];
     return (
-      <div className="flex-1 flex items-center divide-x">
+      <TextCategoryLayout
+        mainParam={mainParam}
+        provider={provider}
+        advancedParams={advancedParams}
+        getParamValue={getParamValue}
+        updateMultipleParameters={updateMultipleParameters}
+        updateParameter={updateParameter}
+        renderField={renderField}
+        parameters={parameters}
+        onParameterChange={onParameterChange}
+      />
+    );
+  }
+
+  return <>{effectiveParameters.map(renderField)}</>;
+};
+
+const TextCategoryLayout: React.FC<{
+  mainParam?: ParameterConfig;
+  provider: string;
+  advancedParams: ParameterConfig[];
+  getParamValue: (key: string) => string;
+  updateMultipleParameters: (
+    updates: { key: string; value: string }[],
+    sourceParam?: ParameterConfig,
+  ) => void;
+  updateParameter: (
+    key: string,
+    value: string,
+    sourceParam?: ParameterConfig,
+  ) => void;
+  renderField: (param: ParameterConfig) => React.ReactNode;
+  parameters: Metadata[] | null;
+  onParameterChange: (parameters: Metadata[]) => void;
+}> = ({
+  mainParam,
+  provider,
+  advancedParams,
+  getParamValue,
+  updateMultipleParameters,
+  updateParameter,
+  renderField,
+  parameters,
+  onParameterChange,
+}) => {
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const snapshotRef = useRef<Metadata[] | null>(null);
+
+  const handleOpen = () => {
+    snapshotRef.current = parameters ? [...parameters] : null;
+    setAdvancedOpen(true);
+  };
+
+  const handleClose = () => {
+    if (snapshotRef.current) {
+      onParameterChange(snapshotRef.current);
+    }
+    snapshotRef.current = null;
+    setAdvancedOpen(false);
+  };
+
+  const handleComplete = () => {
+    snapshotRef.current = null;
+    setAdvancedOpen(false);
+  };
+
+  return (
+    <div className="flex-1 flex items-stretch">
+      <div className="flex-1 min-w-0">
         {mainParam?.type === 'dropdown' &&
           renderTextMainDropdown(
             mainParam,
@@ -282,29 +356,40 @@ export const ConfigRenderer: React.FC<{
             updateMultipleParameters,
             updateParameter,
           )}
-        <div>
-          <Button
-            hasIconOnly
-            renderIcon={advancedOpen ? Close : Settings}
-            iconDescription={advancedOpen ? 'Close' : 'Advanced settings'}
-            kind="ghost"
-            size="sm"
-            onClick={() => setAdvancedOpen(!advancedOpen)}
-          />
-          <Popover
-            align="bottom-end"
-            open={advancedOpen}
-            setOpen={setAdvancedOpen}
-            className="z-50 min-w-fit p-4 grid grid-cols-3 gap-6"
-          >
-            {advancedParams.map(renderField)}
-          </Popover>
-        </div>
       </div>
-    );
-  }
-
-  return <>{effectiveParameters.map(renderField)}</>;
+      <div className="shrink-0 border-l border-gray-200 dark:border-gray-700">
+        <Button
+          hasIconOnly
+          renderIcon={SettingsAdjust}
+          iconDescription="Advanced settings"
+          kind="ghost"
+          size="md"
+          onClick={handleOpen}
+        />
+        <ComposedModal
+          open={advancedOpen}
+          onClose={handleClose}
+          preventCloseOnClickOutside
+          size="lg"
+        >
+          <ModalHeader title="Advanced Settings" />
+          <ModalBody>
+            <div className="grid grid-cols-3 gap-4">
+              {advancedParams.map(renderField)}
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <SecondaryButton onClick={handleClose}>
+              Close
+            </SecondaryButton>
+            <PrimaryButton onClick={handleComplete}>
+              Complete
+            </PrimaryButton>
+          </ModalFooter>
+        </ComposedModal>
+      </div>
+    </div>
+  );
 };
 
 const DropdownField: React.FC<{
