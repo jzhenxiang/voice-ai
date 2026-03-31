@@ -86,7 +86,9 @@ func (rt *sarvamTextToSpeech) Initialize() error {
 
 	rt.mu.Lock()
 	rt.connection = conn
-	rt.ttsConnectedAt = time.Now()
+	if rt.ttsConnectedAt.IsZero() {
+		rt.ttsConnectedAt = time.Now()
+	}
 	rt.mu.Unlock()
 
 	go rt.readLoop(conn)

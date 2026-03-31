@@ -150,7 +150,9 @@ func (azure *azureTextToSpeech) Initialize() (err error) {
 	azure.stream = stream
 	azure.client = client
 	azure.audioConfig = audioConfig
-	azure.ttsConnectedAt = time.Now()
+	if azure.ttsConnectedAt.IsZero() {
+		azure.ttsConnectedAt = time.Now()
+	}
 	azure.mu.Unlock()
 
 	azure.client.SynthesisStarted(azure.OnStart)

@@ -62,7 +62,9 @@ func NewSpeechmaticsTextToSpeech(ctx context.Context, logger commons.Logger, cre
 func (ct *speechmaticsTTS) Initialize() error {
 	start := time.Now()
 	ct.mu.Lock()
-	ct.ttsConnectedAt = time.Now()
+	if ct.ttsConnectedAt.IsZero() {
+		ct.ttsConnectedAt = time.Now()
+	}
 	ct.mu.Unlock()
 	ct.onPacket(internal_type.ConversationEventPacket{
 		Name: "tts",

@@ -104,7 +104,9 @@ func (google *googleTextToSpeech) Initialize() error {
 		_ = google.streamClient.CloseSend()
 	}
 	google.streamClient = stream
-	google.ttsConnectedAt = time.Now()
+	if google.ttsConnectedAt.IsZero() {
+		google.ttsConnectedAt = time.Now()
+	}
 	currentContextId := google.contextId
 	google.mu.Unlock()
 

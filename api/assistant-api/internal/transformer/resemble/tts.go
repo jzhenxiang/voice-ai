@@ -79,7 +79,9 @@ func (rt *resembleTTS) Initialize() error {
 
 	rt.mu.Lock()
 	rt.connection = conn
-	rt.ttsConnectedAt = time.Now()
+	if rt.ttsConnectedAt.IsZero() {
+		rt.ttsConnectedAt = time.Now()
+	}
 	rt.mu.Unlock()
 
 	rt.logger.Debugf("resemble-tts: connection established")

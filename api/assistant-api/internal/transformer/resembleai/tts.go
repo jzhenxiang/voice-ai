@@ -75,7 +75,9 @@ func (ct *resembleaiTTS) Initialize() error {
 
 	ct.mu.Lock()
 	ct.connection = conn
-	ct.ttsConnectedAt = time.Now()
+	if ct.ttsConnectedAt.IsZero() {
+		ct.ttsConnectedAt = time.Now()
+	}
 	ct.mu.Unlock()
 
 	go ct.readLoop(conn)

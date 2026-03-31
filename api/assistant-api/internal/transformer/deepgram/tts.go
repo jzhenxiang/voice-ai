@@ -80,7 +80,9 @@ func (t *deepgramTTS) Initialize() error {
 
 	t.mu.Lock()
 	t.connection = conn
-	t.ttsConnectedAt = time.Now()
+	if t.ttsConnectedAt.IsZero() {
+		t.ttsConnectedAt = time.Now()
+	}
 	t.mu.Unlock()
 
 	go t.readLoop(conn)

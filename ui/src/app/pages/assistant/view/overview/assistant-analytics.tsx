@@ -174,8 +174,14 @@ export const AssistantAnalytics: FC<{ assistant: Assistant }> = props => {
   const avgSttLatency = sttLatencies.length > 0 ? sttLatencies.reduce((a, b) => a + b, 0) / sttLatencies.length : 0;
   const avgTtsLatency = ttsLatencies.length > 0 ? ttsLatencies.reduce((a, b) => a + b, 0) / ttsLatencies.length : 0;
   const avgLlmLatency = llmLatencies.length > 0 ? llmLatencies.reduce((a, b) => a + b, 0) / llmLatencies.length : 0;
-  const totalSttDurationSec = sttLatencies.reduce((a, b) => a + b, 0) / 1000;
-  const totalTtsDurationSec = ttsLatencies.reduce((a, b) => a + b, 0) / 1000;
+  const totalSttDurationSec = convList.reduce((sum, conv) => {
+    const ns = Number(findMetricByName(conv.getMetricsList?.() || [], 'stt_duration'));
+    return sum + (isNaN(ns) ? 0 : ns / 1e9);
+  }, 0);
+  const totalTtsDurationSec = convList.reduce((sum, conv) => {
+    const ns = Number(findMetricByName(conv.getMetricsList?.() || [], 'tts_duration'));
+    return sum + (isNaN(ns) ? 0 : ns / 1e9);
+  }, 0);
 
   // ── Token metrics ──
   const totalTokens = assistantTraceAction.assistantMessages.reduce((sum, m) => sum + getTotalTokenMetric(m.getMetricsList()), 0);

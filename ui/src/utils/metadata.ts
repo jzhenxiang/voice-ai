@@ -4,7 +4,7 @@ import { Struct, Value } from 'google-protobuf/google/protobuf/struct_pb';
 // Metric name constants
 const TIME_TAKEN = 'time_taken';
 const STATUS = 'status';
-const TOTAL_TOKEN = 'total_token';
+const TOTAL_TOKEN = 'agent_total_token';
 
 // ── Universal metric finder ─────────────────────────────────────────────────
 // Proto metrics may expose the name via getName() or getKey() depending on the

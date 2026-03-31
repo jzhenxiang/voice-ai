@@ -62,7 +62,9 @@ func NewGroqTextToSpeech(ctx context.Context, logger commons.Logger, credential 
 func (ct *groqTTS) Initialize() error {
 	start := time.Now()
 	ct.mu.Lock()
-	ct.ttsConnectedAt = time.Now()
+	if ct.ttsConnectedAt.IsZero() {
+		ct.ttsConnectedAt = time.Now()
+	}
 	ct.mu.Unlock()
 	ct.onPacket(internal_type.ConversationEventPacket{
 		Name: "tts",
