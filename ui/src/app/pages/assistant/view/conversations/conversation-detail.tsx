@@ -35,11 +35,11 @@ import { getStatusMetric } from '@/utils/metadata';
 // ── Tab definitions ───────────────────────────────────────────────────────────
 
 const TABS = [
-  { key: 'messages',  label: 'Messages' },
-  { key: 'context',   label: 'Context' },
+  { key: 'messages', label: 'Messages' },
+  { key: 'context', label: 'Context' },
   { key: 'arguments', label: 'Arguments' },
-  { key: 'analysis',  label: 'Analysis' },
-  { key: 'metrics',   label: 'Metrics' },
+  { key: 'analysis', label: 'Analysis' },
+  { key: 'metrics', label: 'Metrics' },
 ] as const;
 
 type TabKey = (typeof TABS)[number]['key'];
@@ -109,7 +109,10 @@ export function ConversationDetailPage() {
         ) : (
           <div className="flex flex-col divide-y divide-gray-200 dark:divide-gray-800">
             {items.map((x, idx) => (
-              <div key={idx} className="px-6 py-4 space-y-3 bg-white dark:bg-gray-900">
+              <div
+                key={idx}
+                className="px-6 py-4 space-y-3 bg-white dark:bg-gray-900"
+              >
                 <p className="text-xs font-medium uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400">
                   {x.getKey().replace('.', ' › ')}
                 </p>
@@ -135,25 +138,46 @@ export function ConversationDetailPage() {
               <div key={idx} className="px-6 py-5 space-y-4">
                 <DataField
                   label="Query"
-                  value={x.getQuery()?.getFieldsMap().get('query')?.getStringValue()}
+                  value={x
+                    .getQuery()
+                    ?.getFieldsMap()
+                    .get('query')
+                    ?.getStringValue()}
                 />
                 <DataField
                   label="Additional Filter"
                   value={JSON.stringify(
-                    x.getQuery()?.getFieldsMap().get('additionalData')?.getStructValue()?.toJavaScript(),
+                    x
+                      .getQuery()
+                      ?.getFieldsMap()
+                      .get('additionalData')
+                      ?.getStructValue()
+                      ?.toJavaScript(),
                   )}
                 />
                 <DataField
                   label={`Content${
-                    x.getResult()?.getFieldsMap().get('score')?.getNumberValue() != null
+                    x
+                      .getResult()
+                      ?.getFieldsMap()
+                      .get('score')
+                      ?.getNumberValue() != null
                       ? ` · score ${x.getResult()?.getFieldsMap().get('score')?.getNumberValue()}`
                       : ''
                   }`}
-                  value={x.getResult()?.getFieldsMap().get('content')?.getStringValue()}
+                  value={x
+                    .getResult()
+                    ?.getFieldsMap()
+                    .get('content')
+                    ?.getStringValue()}
                 />
                 <DataField
                   label="Document"
-                  value={JSON.stringify(x.getMetadata()?.toJavaScript(), null, 2)}
+                  value={JSON.stringify(
+                    x.getMetadata()?.toJavaScript(),
+                    null,
+                    2,
+                  )}
                   mono
                 />
               </div>
@@ -187,14 +211,20 @@ export function ConversationDetailPage() {
               {currentConversation.getMetricsList().map((m, i) => (
                 <TableRow key={i}>
                   <TableCell>{m.getName()}</TableCell>
-                  <TableCell className="break-words break-all">{m.getValue()}</TableCell>
-                  <TableCell className="break-words break-all">{m.getDescription()}</TableCell>
+                  <TableCell className="break-words break-all">
+                    {m.getValue()}
+                  </TableCell>
+                  <TableCell className="break-words break-all">
+                    {m.getDescription()}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         ) : (
-          <BlueNoticeBlock>No metrics have been captured for this conversation.</BlueNoticeBlock>
+          <BlueNoticeBlock>
+            No metrics have been captured for this conversation.
+          </BlueNoticeBlock>
         );
 
       case 'arguments':
@@ -226,7 +256,9 @@ export function ConversationDetailPage() {
                 <TableRow key={`meta-${i}`}>
                   <TableCell>Metadata</TableCell>
                   <TableCell>{m.getKey()}</TableCell>
-                  <TableCell className="break-words break-all">{m.getValue()}</TableCell>
+                  <TableCell className="break-words break-all">
+                    {m.getValue()}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -247,7 +279,9 @@ export function ConversationDetailPage() {
             iconDescription="Back to sessions"
             onClick={() => navigator.goToAssistantSessionList(assistantId!)}
           />
-          <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Sessions</span>
+          <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            Sessions
+          </span>
           <span className="text-gray-300 dark:text-gray-600">/</span>
           <span className="text-sm font-medium text-gray-900 dark:text-gray-100 font-mono truncate">
             {sessionId}
@@ -304,7 +338,12 @@ const DataField = ({
     <p className="text-xs font-medium uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400 mb-1">
       {label}
     </p>
-    <p className={cn('text-sm text-gray-900 dark:text-gray-100 leading-relaxed', mono && 'font-mono')}>
+    <p
+      className={cn(
+        'text-sm text-gray-900 dark:text-gray-100 leading-relaxed',
+        mono && 'font-mono',
+      )}
+    >
       {value ?? '—'}
     </p>
   </div>
@@ -359,9 +398,12 @@ const JsonViewer = ({ data, preview = false }: JsonViewerProps) => {
     preview && insights.length > 3 ? insights.slice(0, 3) : insights;
 
   const formatValue = (value: any, type: string) => {
-    if (type === 'array') return Array.isArray(value) ? value.join(', ') : String(value);
+    if (type === 'array')
+      return Array.isArray(value) ? value.join(', ') : String(value);
     if (type === 'number')
-      return typeof value === 'number' ? `${Math.round(value * 100)}%` : String(value);
+      return typeof value === 'number'
+        ? `${Math.round(value * 100)}%`
+        : String(value);
     return String(value);
   };
 

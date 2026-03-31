@@ -93,6 +93,12 @@ func (r *genericRequestor) Disconnect(ctx context.Context) {
 	})
 	waitGroup.Wait()
 
+	// Drain low-priority packets (STT/TTS duration metrics, close events)
+	// enqueued by the Close() calls above. The dispatcher goroutines have
+	// already exited because the streamer context was cancelled before
+	// Disconnect() runs, so these would otherwise be silently lost.
+	r.drainLowChannel()
+
 	// Phase 2: Trigger end-of-conversation hooks
 	r.OnEndConversation(ctx)
 
