@@ -12,7 +12,7 @@ import { Code } from 'lucide-react';
 import { FC, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
-  AssistantDebuggerDeployment,
+  AssistantApiDeployment,
   ConnectionConfig,
   CreateAssistantApiDeployment,
   CreateAssistantDeploymentRequest,
@@ -287,7 +287,7 @@ const ConfigureAssistantApiDeployment: FC<{ assistantId: string }> = ({
     }
 
     const req = new CreateAssistantDeploymentRequest();
-    const deployment = new AssistantDebuggerDeployment();
+    const deployment = new AssistantApiDeployment();
     deployment.setAssistantid(assistantId);
     if (experienceConfig.greeting)
       deployment.setGreeting(experienceConfig.greeting);

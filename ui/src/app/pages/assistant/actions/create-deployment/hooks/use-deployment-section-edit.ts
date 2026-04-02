@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import {
+  AssistantApiDeployment,
   AssistantDebuggerDeployment,
   AssistantPhoneDeployment,
   AssistantWebpluginDeployment,
@@ -362,7 +363,7 @@ export function useDeploymentSectionEdit(
       applyCommonFields(d);
       req.setDebugger(d);
     } else if (type === 'api') {
-      const d = new AssistantDebuggerDeployment();
+      const d = new AssistantApiDeployment();
       applyCommonFields(d);
       req.setApi(d);
     } else if (type === 'web') {

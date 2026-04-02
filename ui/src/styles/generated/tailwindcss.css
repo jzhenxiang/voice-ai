@@ -9599,6 +9599,11 @@
       color: var(--color-white) !important;
     }
   }
+  .\[\&_\.cds--batch-summary\\_\\_divider\]\:hidden {
+    & .cds--batch-summary__divider {
+      display: none;
+    }
+  }
   .\[\&_\.cds--dropdown\]\:\!rounded-none {
     & .cds--dropdown {
       border-radius: 0 !important;
@@ -9719,6 +9724,11 @@
   .\[\&_\:is\(ul\,ol\)\]\:pl-5 {
     & :is(ul,ol) {
       padding-left: calc(var(--spacing) * 5);
+    }
+  }
+  .\[\&_\[class\*\=divider\]\]\:hidden {
+    & [class*=divider] {
+      display: none;
     }
   }
   .\[\&_div\[data-lang\]\]\:overflow-auto {
