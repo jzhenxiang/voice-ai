@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 
+	obs "github.com/rapidaai/api/assistant-api/internal/observe"
 	sip_infra "github.com/rapidaai/api/assistant-api/sip/infra"
 	"github.com/rapidaai/protos"
 )
@@ -25,7 +26,7 @@ func (d *Dispatcher) handleByeReceived(ctx context.Context, v sip_infra.ByeRecei
 		},
 		sip_infra.EventEmittedPipeline{
 			ID:    v.ID,
-			Event: "bye_received",
+			Event: obs.EventByeReceived,
 		},
 	)
 }
@@ -41,7 +42,7 @@ func (d *Dispatcher) handleCancelReceived(ctx context.Context, v sip_infra.Cance
 		},
 		sip_infra.EventEmittedPipeline{
 			ID:    v.ID,
-			Event: "cancel_received",
+			Event: obs.EventCancelReceived,
 		},
 	)
 }
@@ -63,21 +64,25 @@ func (d *Dispatcher) handleCallEnded(ctx context.Context, v sip_infra.CallEndedP
 		"reason", v.Reason)
 
 	// Persist end-of-call event and metrics to DB
-	d.emitEvent(ctx, v.ID, "sip", map[string]string{
-		"type":     "call_ended",
-		"reason":   v.Reason,
-		"duration": v.Duration.String(),
+	d.emitEvent(ctx, v.ID, obs.ComponentSIP, map[string]string{
+		obs.DataType:     obs.EventCallEnded,
+		obs.DataReason:   v.Reason,
+		obs.DataDuration: fmt.Sprintf("%d", v.Duration.Milliseconds()),
 	})
 
 	d.emitMetric(ctx, v.ID, []*protos.Metric{
-		{Name: "sip.call_duration_ms", Value: fmt.Sprintf("%d", v.Duration.Milliseconds()), Description: "SIP call duration"},
-		{Name: "sip.end_reason", Value: v.Reason, Description: "Call end reason"},
+		{Name: obs.MetricCallDurationMs, Value: fmt.Sprintf("%d", v.Duration.Milliseconds()), Description: "SIP call duration"},
+		{Name: obs.MetricCallEndReason, Value: v.Reason, Description: "Call end reason"},
 	})
 
-	// Remove call context from store
+	// Fire OnEnd hooks (webhooks + analysis)
+	if hooks, ok := d.getHooks(v.ID); ok {
+		hooks.OnEnd(ctx)
+		d.removeHooks(v.ID)
+	}
+
 	d.removeObserver(ctx, v.ID)
 
-	// Delegate cleanup to SIPEngine (cancel context, remove from session map)
 	if d.onCallEnd != nil {
 		d.onCallEnd(v.ID)
 	}
@@ -90,15 +95,21 @@ func (d *Dispatcher) handleCallFailed(ctx context.Context, v sip_infra.CallFaile
 		"error", v.Error,
 		"sip_code", v.SIPCode)
 
-	d.emitEvent(ctx, v.ID, "sip", map[string]string{
-		"type":     "call_failed",
-		"error":    fmt.Sprintf("%v", v.Error),
-		"sip_code": fmt.Sprintf("%d", v.SIPCode),
+	d.emitEvent(ctx, v.ID, obs.ComponentSIP, map[string]string{
+		obs.DataType:  obs.EventCallFailed,
+		obs.DataError: fmt.Sprintf("%v", v.Error),
+		"sip_code":    fmt.Sprintf("%d", v.SIPCode),
 	})
 
 	d.emitMetric(ctx, v.ID, []*protos.Metric{
-		{Name: "sip.call_failed", Value: fmt.Sprintf("%v", v.Error), Description: "SIP call failure"},
+		{Name: obs.MetricCallFailed, Value: fmt.Sprintf("%v", v.Error), Description: "SIP call failure"},
 	})
+
+	// Fire OnError hooks (webhooks)
+	if hooks, ok := d.getHooks(v.ID); ok {
+		hooks.OnError(ctx)
+		d.removeHooks(v.ID)
+	}
 
 	d.removeObserver(ctx, v.ID)
 

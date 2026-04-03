@@ -11,11 +11,13 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/rapidaai/api/assistant-api/config"
 	callcontext "github.com/rapidaai/api/assistant-api/internal/callcontext"
+	channel_pipeline "github.com/rapidaai/api/assistant-api/internal/channel/pipeline"
+	internal_assistant_entity "github.com/rapidaai/api/assistant-api/internal/entity/assistants"
 	internal_services "github.com/rapidaai/api/assistant-api/internal/services"
+	internal_type "github.com/rapidaai/api/assistant-api/internal/type"
 	web_client "github.com/rapidaai/pkg/clients/web"
 	"github.com/rapidaai/pkg/commons"
 	"github.com/rapidaai/pkg/types"
@@ -29,26 +31,44 @@ import (
 // common business logic: provider resolution, call reception, conversation
 // creation, call-context persistence, telemetry application, and session resolution.
 type InboundDispatcher struct {
-	cfg                 *config.AssistantConfig
-	store               callcontext.Store
-	logger              commons.Logger
-	vaultClient         web_client.VaultClient
-	assistantService    internal_services.AssistantService
-	conversationService internal_services.AssistantConversationService
-	telephonyOpt        TelephonyOption
+	cfg              *config.AssistantConfig
+	store            callcontext.Store
+	logger           commons.Logger
+	vaultClient      web_client.VaultClient
+	assistantService internal_services.AssistantService
+	telephonyOpt     TelephonyOption
+	pipeline         *channel_pipeline.Dispatcher
+
+	// createConversation is injected — keeps the dispatcher free of conversationService dependency.
+	createConversation CreateConversationFunc
 }
+
+// CreateConversationFunc creates a conversation and returns its ID.
+type CreateConversationFunc func(ctx context.Context, auth types.SimplePrinciple, callerNumber string, assistantID, assistantProviderID uint64, direction type_enums.ConversationDirection, source utils.RapidaSource) (conversationID uint64, err error)
 
 // NewInboundDispatcher creates a new inbound call dispatcher.
 func NewInboundDispatcher(deps TelephonyDispatcherDeps) *InboundDispatcher {
 	return &InboundDispatcher{
-		cfg:                 deps.Cfg,
-		store:               deps.Store,
-		logger:              deps.Logger,
-		vaultClient:         deps.VaultClient,
-		assistantService:    deps.AssistantService,
-		conversationService: deps.ConversationService,
-		telephonyOpt:        deps.TelephonyOpt,
+		cfg:              deps.Cfg,
+		store:            deps.Store,
+		logger:           deps.Logger,
+		vaultClient:      deps.VaultClient,
+		assistantService: deps.AssistantService,
+		telephonyOpt:     deps.TelephonyOpt,
+		pipeline:         deps.Pipeline,
+		createConversation: func(ctx context.Context, auth types.SimplePrinciple, callerNumber string, assistantID, assistantProviderID uint64, direction type_enums.ConversationDirection, source utils.RapidaSource) (uint64, error) {
+			conv, err := deps.ConversationService.CreateConversation(ctx, auth, callerNumber, assistantID, assistantProviderID, direction, source)
+			if err != nil {
+				return 0, err
+			}
+			return conv.Id, nil
+		},
 	}
+}
+
+// SetPipeline sets the pipeline dispatcher (for late initialization).
+func (d *InboundDispatcher) SetPipeline(p *channel_pipeline.Dispatcher) {
+	d.pipeline = p
 }
 
 // HandleStatusCallback resolves the telephony provider and processes a status callback
@@ -67,17 +87,25 @@ func (d *InboundDispatcher) HandleStatusCallback(c *gin.Context, provider string
 		return nil
 	}
 
-	// Build telemetry from StatusInfo — the dispatcher owns telemetry construction.
-	metric := types.NewMetric("STATUS", statusInfo.Event, utils.Ptr("Status of conversation"))
-	if _, err := d.conversationService.ApplyConversationMetrics(c, auth, assistantId, conversationId, []*types.Metric{metric}); err != nil {
-		d.logger.Errorf("failed to apply conversation metrics in callback: %v", err)
-		return fmt.Errorf("failed to process metrics: %w", err)
-	}
-
-	event := types.NewEvent(statusInfo.Event, statusInfo.Payload)
-	if _, err := d.conversationService.ApplyConversationTelephonyEvent(c, auth, provider, assistantId, conversationId, []*types.Event{event}); err != nil {
-		d.logger.Errorf("failed to apply telephony events in callback: %v", err)
-		return fmt.Errorf("failed to process events: %w", err)
+	// Emit status callback telemetry through pipeline observer.
+	// The observer persists to DB + exports to telemetry backends.
+	if d.pipeline != nil {
+		d.pipeline.OnPipeline(c,
+			channel_pipeline.EventEmittedPipeline{
+				ID:    fmt.Sprintf("%d", conversationId),
+				Event: statusInfo.Event,
+				Data: map[string]string{
+					"type":     statusInfo.Event,
+					"provider": provider,
+				},
+			},
+			channel_pipeline.MetricEmittedPipeline{
+				ID: fmt.Sprintf("%d", conversationId),
+				Metrics: []*protos.Metric{
+					{Name: "STATUS", Value: statusInfo.Event, Description: "Status callback from provider"},
+				},
+			},
+		)
 	}
 	return nil
 }
@@ -101,85 +129,53 @@ func (d *InboundDispatcher) HandleStatusCallbackByContext(c *gin.Context, contex
 // receives the call, creates a conversation, saves a CallContext in Postgres, applies telemetry,
 // and instructs the provider to answer the call.
 // Returns the contextID for AudioSocket/WebSocket resolution.
-func (d *InboundDispatcher) HandleReceiveCall(c *gin.Context, provider string, auth types.SimplePrinciple, assistantId uint64) (string, error) {
+// InboundCallResult carries the output of HandleReceiveCall for pipeline/observer use.
+// Includes CallInfo data so the pipeline can emit telemetry through the observer.
+type InboundCallResult struct {
+	ContextID      string
+	ConversationID uint64
+	AssistantID    uint64
+	Provider       string
+	CallerNumber   string
+	CallStatus     string
+	CallEvent      string
+	CallPayload    interface{}        // raw provider event payload
+	Extra          map[string]string // provider-specific metadata
+}
+
+func (d *InboundDispatcher) HandleReceiveCall(c *gin.Context, provider string, auth types.SimplePrinciple, assistantId uint64) (*InboundCallResult, error) {
 	tel, err := GetTelephony(Telephony(provider), d.cfg, d.logger, d.telephonyOpt)
 	if err != nil {
-		return "", fmt.Errorf("telephony provider %s not connected: %w", provider, err)
+		return nil, fmt.Errorf("telephony provider %s not connected: %w", provider, err)
 	}
 
 	callInfo, err := tel.ReceiveCall(c)
 	if err != nil {
-		return "", fmt.Errorf("receive call failed: %w", err)
+		return nil, fmt.Errorf("receive call failed: %w", err)
 	}
 	if callInfo == nil {
-		return "", nil
+		return nil, nil
 	}
 
 	assistant, err := d.assistantService.Get(c, auth, assistantId, utils.GetVersionDefinition("latest"), &internal_services.GetAssistantOption{InjectPhoneDeployment: true})
 	if err != nil {
 		d.logger.Debugf("unable to find assistant %v", err)
-		return "", fmt.Errorf("unable to find assistant: %w", err)
+		return nil, fmt.Errorf("unable to find assistant: %w", err)
 	}
 
-	conversation, err := d.conversationService.CreateConversation(c, auth, callInfo.CallerNumber, assistant.Id, assistant.AssistantProviderId, type_enums.DIRECTION_INBOUND, utils.PhoneCall)
+	conversationID, err := d.createConversation(c, auth, callInfo.CallerNumber, assistant.Id, assistant.AssistantProviderId, type_enums.DIRECTION_INBOUND, utils.PhoneCall)
 	if err != nil {
-		return "", fmt.Errorf("unable to create conversation: %w", err)
+		return nil, fmt.Errorf("unable to create conversation: %w", err)
 	}
 
-	// Build and apply telemetry from CallInfo — the dispatcher owns telemetry construction.
-	var wg errgroup.Group
-
-	// Apply metadata from CallInfo.Extra (provider-specific fields)
-	wg.Go(func() error {
-		var metadatas []*types.Metadata
-		for k, v := range callInfo.Extra {
-			metadatas = append(metadatas, types.NewMetadata(k, v))
-		}
-		if len(metadatas) > 0 {
-			mtdas, err := d.conversationService.ApplyConversationMetadata(c, auth, assistant.Id, conversation.Id, metadatas)
-			if err != nil {
-				d.logger.Errorf("failed to apply conversation metadata: %v", err)
-				return err
-			}
-			conversation.Metadatas = mtdas
-		}
-		return nil
-	})
-
-	// Apply metric from CallInfo.Status
-	wg.Go(func() error {
-		metric := types.NewMetric("STATUS", callInfo.Status, utils.Ptr("Status of telephony api"))
-		metrics, err := d.conversationService.ApplyConversationMetrics(c, auth, assistant.Id, conversation.Id, []*types.Metric{metric})
-		if err != nil {
-			d.logger.Errorf("failed to apply conversation metrics: %v", err)
-			return err
-		}
-		conversation.Metrics = append(conversation.Metrics, metrics...)
-		return nil
-	})
-
-	// Apply telephony event from CallInfo.StatusInfo
-	wg.Go(func() error {
-		event := types.NewEvent(callInfo.StatusInfo.Event, callInfo.StatusInfo.Payload)
-		evts, err := d.conversationService.ApplyConversationTelephonyEvent(c, auth, assistant.AssistantPhoneDeployment.TelephonyProvider, assistant.Id, conversation.Id, []*types.Event{event})
-		if err != nil {
-			d.logger.Errorf("failed to apply telephony events: %v", err)
-			return err
-		}
-		conversation.TelephonyEvents = append(conversation.TelephonyEvents, evts...)
-		return nil
-	})
-
-	if err := wg.Wait(); err != nil {
-		d.logger.Errorf("failed to process telemetry for inbound call: %v", err)
-		return "", fmt.Errorf("failed to process call telemetry: %w", err)
-	}
+	// Telemetry is emitted by the pipeline handler via observer — not here.
+	// CallInfo data is carried in InboundCallResult for pipeline use.
 
 	// Store call context in Postgres for AudioSocket/WebSocket resolution.
 	// ChannelUUID comes directly from CallInfo — no need to scan metadata.
 	cc := &callcontext.CallContext{
 		AssistantID:         assistant.Id,
-		ConversationID:      conversation.Id,
+		ConversationID:      conversationID,
 		AssistantProviderId: assistant.AssistantProviderId,
 		AuthToken:           auth.GetCurrentToken(),
 		AuthType:            auth.Type(),
@@ -197,7 +193,7 @@ func (d *InboundDispatcher) HandleReceiveCall(c *gin.Context, provider string, a
 	contextID, err := d.store.Save(c, cc)
 	if err != nil {
 		d.logger.Errorf("failed to save call context: %v", err)
-		return "", fmt.Errorf("failed to create call context: %w", err)
+		return nil, fmt.Errorf("failed to create call context: %w", err)
 	}
 
 	// Pass contextId to the telephony provider for inbound call setup
@@ -205,12 +201,28 @@ func (d *InboundDispatcher) HandleReceiveCall(c *gin.Context, provider string, a
 	// For WebSocket providers: the contextId is embedded in the WebSocket URL path
 	c.Set("contextId", contextID)
 
-	if err := tel.InboundCall(c, auth, assistant.Id, callInfo.CallerNumber, conversation.Id); err != nil {
+	if err := tel.InboundCall(c, auth, assistant.Id, callInfo.CallerNumber, conversationID); err != nil {
 		d.logger.Errorf("failed to initiate inbound call: %v", err)
-		return "", fmt.Errorf("unable to initiate inbound call: %w", err)
+		return nil, fmt.Errorf("unable to initiate inbound call: %w", err)
 	}
 
-	return contextID, nil
+	// Build extra metadata from CallInfo
+	extra := make(map[string]string)
+	for k, v := range callInfo.Extra {
+		extra[k] = v
+	}
+
+	return &InboundCallResult{
+		ContextID:      contextID,
+		ConversationID: conversationID,
+		AssistantID:    assistant.Id,
+		Provider:       provider,
+		CallerNumber:   callInfo.CallerNumber,
+		CallStatus:     callInfo.Status,
+		CallEvent:      callInfo.StatusInfo.Event,
+		CallPayload:    callInfo.StatusInfo.Payload,
+		Extra:          extra,
+	}, nil
 }
 
 // ResolveVaultCredential fetches the vault credential for the given assistant.
@@ -230,7 +242,14 @@ func (d *InboundDispatcher) ResolveVaultCredential(ctx context.Context, auth typ
 	}
 	vltC, err := d.vaultClient.GetCredential(ctx, auth, credentialID)
 	if err != nil {
-		d.conversationService.ApplyConversationMetrics(ctx, auth, assistantId, conversationId, []*types.Metric{{Name: type_enums.STATUS.String(), Value: type_enums.RECORD_FAILED.String(), Description: "Failed to resolve vault credential"}})
+		// Emit failure through pipeline (observer persists RECORD_FAILED)
+		if d.pipeline != nil {
+			d.pipeline.OnPipeline(ctx, channel_pipeline.CallFailedPipeline{
+				ID:    fmt.Sprintf("%d", conversationId),
+				Stage: "vault_credential",
+				Error: err,
+			})
+		}
 		return nil, fmt.Errorf("failed to resolve vault credential: %w", err)
 	}
 	return vltC, nil
@@ -264,4 +283,62 @@ func (d *InboundDispatcher) CompleteCallSession(ctx context.Context, contextID s
 	if err := d.store.Complete(ctx, contextID); err != nil {
 		d.logger.Warnf("failed to complete call context %s: %v", contextID, err)
 	}
+}
+
+// =============================================================================
+// Individual stage methods — called by pipeline callbacks
+// =============================================================================
+
+// ReceiveCall parses the provider webhook and returns CallInfo.
+func (d *InboundDispatcher) ReceiveCall(c *gin.Context, provider string) (*internal_type.CallInfo, error) {
+	tel, err := GetTelephony(Telephony(provider), d.cfg, d.logger, d.telephonyOpt)
+	if err != nil {
+		return nil, fmt.Errorf("telephony provider %s not connected: %w", provider, err)
+	}
+	return tel.ReceiveCall(c)
+}
+
+// LoadAssistant loads the assistant entity with phone deployment.
+func (d *InboundDispatcher) LoadAssistant(ctx context.Context, auth types.SimplePrinciple, assistantID uint64) (*internal_assistant_entity.Assistant, error) {
+	return d.assistantService.Get(ctx, auth, assistantID, utils.GetVersionDefinition("latest"), &internal_services.GetAssistantOption{InjectPhoneDeployment: true})
+}
+
+// CreateConversation creates a conversation and returns its ID.
+func (d *InboundDispatcher) CreateConversation(ctx context.Context, auth types.SimplePrinciple, callerNumber string, assistantID, assistantProviderID uint64, direction string) (uint64, error) {
+	dir := type_enums.DIRECTION_INBOUND
+	if direction == "outbound" {
+		dir = type_enums.DIRECTION_OUTBOUND
+	}
+	return d.createConversation(ctx, auth, callerNumber, assistantID, assistantProviderID, dir, utils.PhoneCall)
+}
+
+// SaveCallContext stores the call context in Postgres and returns the contextID.
+func (d *InboundDispatcher) SaveCallContext(ctx context.Context, auth types.SimplePrinciple, assistant *internal_assistant_entity.Assistant, conversationID uint64, callInfo *internal_type.CallInfo, provider string) (string, error) {
+	cc := &callcontext.CallContext{
+		AssistantID:         assistant.Id,
+		ConversationID:      conversationID,
+		AssistantProviderId: assistant.AssistantProviderId,
+		AuthToken:           auth.GetCurrentToken(),
+		AuthType:            auth.Type(),
+		Direction:           "inbound",
+		CallerNumber:        callInfo.CallerNumber,
+		Provider:            provider,
+		ChannelUUID:         callInfo.ChannelUUID,
+	}
+	if auth.GetCurrentProjectId() != nil {
+		cc.ProjectID = *auth.GetCurrentProjectId()
+	}
+	if auth.GetCurrentOrganizationId() != nil {
+		cc.OrganizationID = *auth.GetCurrentOrganizationId()
+	}
+	return d.store.Save(ctx, cc)
+}
+
+// AnswerProvider instructs the telephony provider to answer the call.
+func (d *InboundDispatcher) AnswerProvider(c *gin.Context, auth types.SimplePrinciple, provider string, assistantID uint64, callerNumber string, conversationID uint64) error {
+	tel, err := GetTelephony(Telephony(provider), d.cfg, d.logger, d.telephonyOpt)
+	if err != nil {
+		return fmt.Errorf("telephony provider %s not connected: %w", provider, err)
+	}
+	return tel.InboundCall(c, auth, assistantID, callerNumber, conversationID)
 }

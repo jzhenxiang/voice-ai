@@ -113,8 +113,8 @@ func (r *genericRequestor) Disconnect(ctx context.Context) {
 	if r.observer != nil {
 		r.observer.EventCollectors().Collect(context.Background(), observe.EventRecord{
 			MessageID: r.GetID(),
-			Name:      "session",
-			Data:      map[string]string{"type": "disconnected", "total_messages": fmt.Sprintf("%d", len(r.GetHistories()))},
+			Name:      observe.ComponentSession,
+			Data:      map[string]string{observe.DataType: observe.EventDisconnected, observe.DataMessages: fmt.Sprintf("%d", len(r.GetHistories()))},
 			Time:      time.Now(),
 		})
 	}
@@ -290,12 +290,12 @@ func (r *genericRequestor) createSession(
 	}
 
 	r.OnPacket(ctx, internal_type.ConversationEventPacket{
-		Name: "session",
+		Name: observe.ComponentSession,
 		Data: map[string]string{
-			"type":       "connected",
-			"source":     fmt.Sprintf("%v", r.source),
-			"is_new":     "true",
-			"identifier": r.identifier(config),
+			observe.DataType: observe.EventConnected,
+			"source":         fmt.Sprintf("%v", r.source),
+			"is_new":         "true",
+			"identifier":     r.identifier(config),
 		},
 		Time: time.Now(),
 	})
@@ -372,8 +372,8 @@ func (r *genericRequestor) initSessionBackground(ctx context.Context, isNew bool
 		r.recorder = rc
 		r.recorder.Start()
 		r.OnPacket(ctx, internal_type.ConversationEventPacket{
-			Name: "session",
-			Data: map[string]string{"type": "recording_started"},
+			Name: observe.ComponentRecording,
+			Data: map[string]string{observe.DataType: observe.EventRecordingStarted},
 			Time: time.Now(),
 		})
 	})

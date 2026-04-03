@@ -12,11 +12,10 @@ import (
 
 	"github.com/rapidaai/api/assistant-api/config"
 	callcontext "github.com/rapidaai/api/assistant-api/internal/callcontext"
+	channel_pipeline "github.com/rapidaai/api/assistant-api/internal/channel/pipeline"
 	internal_services "github.com/rapidaai/api/assistant-api/internal/services"
 	web_client "github.com/rapidaai/pkg/clients/web"
 	"github.com/rapidaai/pkg/commons"
-	"github.com/rapidaai/pkg/types"
-	type_enums "github.com/rapidaai/pkg/types/enums"
 )
 
 // OutboundDispatcher handles outbound call dispatching across all telephony
@@ -28,8 +27,8 @@ type OutboundDispatcher struct {
 	logger              commons.Logger
 	vaultClient         web_client.VaultClient
 	assistantService    internal_services.AssistantService
-	conversationService internal_services.AssistantConversationService
-	telephonyOpt        TelephonyOption
+	telephonyOpt TelephonyOption
+	pipeline            *channel_pipeline.Dispatcher
 }
 
 // NewOutboundDispatcher creates a new outbound call dispatcher.
@@ -38,11 +37,16 @@ func NewOutboundDispatcher(deps TelephonyDispatcherDeps) *OutboundDispatcher {
 		cfg:                 deps.Cfg,
 		store:               deps.Store,
 		logger:              deps.Logger,
-		vaultClient:         deps.VaultClient,
-		assistantService:    deps.AssistantService,
-		conversationService: deps.ConversationService,
-		telephonyOpt:        deps.TelephonyOpt,
+		vaultClient:      deps.VaultClient,
+		assistantService: deps.AssistantService,
+		telephonyOpt:     deps.TelephonyOpt,
+		pipeline:            deps.Pipeline,
 	}
+}
+
+// SetPipeline sets the pipeline dispatcher (for late initialization).
+func (d *OutboundDispatcher) SetPipeline(p *channel_pipeline.Dispatcher) {
+	d.pipeline = p
 }
 
 // Dispatch resolves the call context for the given contextID and places the
@@ -70,93 +74,78 @@ func (d *OutboundDispatcher) Dispatch(ctx context.Context, contextID string) err
 	return nil
 }
 
-// performOutbound resolves the telephony provider from the call context and places the call.
+// performOutbound resolves the telephony provider, places the call, and emits
+// all telemetry (success AND failure) through the pipeline observer.
+// No direct ApplyConversationMetrics/Metadata calls — everything flows through observer.
 func (d *OutboundDispatcher) performOutbound(ctx context.Context, cc *callcontext.CallContext) error {
+	emitFailed := func(stage string, err error) {
+		if d.pipeline != nil {
+			d.pipeline.OnPipeline(ctx, channel_pipeline.CallFailedPipeline{
+				ID:    cc.ContextID,
+				Stage: stage,
+				Error: err,
+			})
+		}
+	}
+
 	telephony, err := GetTelephony(Telephony(cc.Provider), d.cfg, d.logger, d.telephonyOpt)
 	if err != nil {
+		emitFailed("provider_resolve", err)
 		return fmt.Errorf("telephony provider %s not available: %w", cc.Provider, err)
 	}
 
 	auth := cc.ToAuth()
 
-	// Load assistant with phone deployment
 	assistant, err := d.assistantService.Get(ctx, auth, cc.AssistantID, nil, &internal_services.GetAssistantOption{InjectPhoneDeployment: true})
 	if err != nil {
-		d.conversationService.ApplyConversationMetrics(ctx, auth, cc.AssistantID, cc.ConversationID,
-			[]*types.Metric{types.NewStatusMetric(type_enums.RECORD_FAILED)})
+		emitFailed("assistant_load", err)
 		return fmt.Errorf("failed to load assistant %d: %w", cc.AssistantID, err)
 	}
 
 	if !assistant.IsPhoneDeploymentEnable() {
-		d.conversationService.ApplyConversationMetrics(ctx, auth, cc.AssistantID, cc.ConversationID,
-			[]*types.Metric{types.NewStatusMetric(type_enums.RECORD_FAILED)})
-		return fmt.Errorf("phone deployment not enabled for assistant %d", cc.AssistantID)
+		err := fmt.Errorf("phone deployment not enabled for assistant %d", cc.AssistantID)
+		emitFailed("phone_deployment", err)
+		return err
 	}
 
-	// Get vault credential
 	credentialID, err := assistant.AssistantPhoneDeployment.GetOptions().GetUint64("rapida.credential_id")
 	if err != nil {
-		d.conversationService.ApplyConversationMetrics(ctx, auth, cc.AssistantID, cc.ConversationID,
-			[]*types.Metric{types.NewStatusMetric(type_enums.RECORD_FAILED)})
+		emitFailed("credential_resolve", err)
 		return fmt.Errorf("failed to get credential ID: %w", err)
 	}
 
 	vltC, err := d.vaultClient.GetCredential(ctx, auth, credentialID)
 	if err != nil {
-		d.conversationService.ApplyConversationMetrics(ctx, auth, cc.AssistantID, cc.ConversationID,
-			[]*types.Metric{types.NewStatusMetric(type_enums.RECORD_FAILED)})
+		emitFailed("vault_credential", err)
 		return fmt.Errorf("failed to get vault credential: %w", err)
 	}
 
-	// Build options with contextId for channel variables (ARI, SIP headers, etc.)
 	opts := assistant.AssistantPhoneDeployment.GetOptions()
 	opts["rapida.context_id"] = cc.ContextID
 
-	// Place the outbound call via the telephony provider
 	callInfo, callErr := telephony.OutboundCall(auth, cc.CallerNumber, cc.FromNumber, cc.AssistantID, cc.ConversationID, vltC, opts)
 	if callErr != nil {
 		d.logger.Errorf("outbound dispatcher[%s]: telephony call failed for contextId=%s: %v", cc.Provider, cc.ContextID, callErr)
 	}
 
 	if callInfo == nil {
+		emitFailed("dial", callErr)
 		return callErr
 	}
 
-	// Build and apply telemetry from CallInfo — the dispatcher owns telemetry construction.
-
-	// Persist the provider call UUID in the call context so that
-	// downstream operations (transfer, disconnect) can reference the live call.
+	// Persist provider call UUID for downstream operations (transfer, disconnect)
 	if callInfo.ChannelUUID != "" {
 		if updateErr := d.store.UpdateField(ctx, cc.ContextID, "channel_uuid", callInfo.ChannelUUID); updateErr != nil {
-			d.logger.Warnf("outbound dispatcher[%s]: failed to store channel UUID for contextId=%s: %v", cc.Provider, cc.ContextID, updateErr)
+			d.logger.Warnf("outbound dispatcher[%s]: failed to store channel UUID: %v", cc.Provider, updateErr)
 		}
 	}
 
-	// Apply metadata: provider, toPhone, fromPhone, error (if any), plus provider-specific Extra fields
-	metadatas := []*types.Metadata{
-		types.NewMetadata("telephony.toPhone", cc.CallerNumber),
-		types.NewMetadata("telephony.fromPhone", cc.FromNumber),
-		types.NewMetadata("telephony.provider", cc.Provider),
-	}
-	if callInfo.ChannelUUID != "" {
-		metadatas = append(metadatas, types.NewMetadata("telephony.uuid", callInfo.ChannelUUID))
-	}
-	if callInfo.ErrorMessage != "" {
-		metadatas = append(metadatas, types.NewMetadata("telephony.error", callInfo.ErrorMessage))
-	}
-	for k, v := range callInfo.Extra {
-		metadatas = append(metadatas, types.NewMetadata(k, v))
-	}
-	d.conversationService.ApplyConversationMetadata(ctx, auth, cc.AssistantID, cc.ConversationID, metadatas)
-
-	// Apply metric from CallInfo.Status
-	metric := types.NewMetric("STATUS", callInfo.Status, nil)
-	d.conversationService.ApplyConversationMetrics(ctx, auth, cc.AssistantID, cc.ConversationID, []*types.Metric{metric})
-
-	// Apply telephony event from CallInfo.StatusInfo
-	if callInfo.StatusInfo.Event != "" {
-		event := types.NewEvent(callInfo.StatusInfo.Event, callInfo.StatusInfo.Payload)
-		d.conversationService.ApplyConversationTelephonyEvent(ctx, auth, cc.Provider, cc.AssistantID, cc.ConversationID, []*types.Event{event})
+	// Emit success telemetry through pipeline observer
+	if d.pipeline != nil {
+		d.pipeline.OnPipeline(ctx, channel_pipeline.OutboundDialedPipeline{
+			ID:       cc.ContextID,
+			CallInfo: callInfo,
+		})
 	}
 
 	return callErr

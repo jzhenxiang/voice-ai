@@ -16,6 +16,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/rapidaai/api/assistant-api/config"
 	callcontext "github.com/rapidaai/api/assistant-api/internal/callcontext"
+	channel_pipeline "github.com/rapidaai/api/assistant-api/internal/channel/pipeline"
 	internal_asterisk_telephony "github.com/rapidaai/api/assistant-api/internal/channel/telephony/internal/asterisk"
 	internal_asterisk_audiosocket "github.com/rapidaai/api/assistant-api/internal/channel/telephony/internal/asterisk/audiosocket"
 	internal_asterisk_websocket "github.com/rapidaai/api/assistant-api/internal/channel/telephony/internal/asterisk/websocket"
@@ -99,6 +100,7 @@ type TelephonyDispatcherDeps struct {
 	AssistantService    internal_services.AssistantService
 	ConversationService internal_services.AssistantConversationService
 	TelephonyOpt        TelephonyOption
+	Pipeline            *channel_pipeline.Dispatcher
 }
 
 // --------------------------------------------------------------------------

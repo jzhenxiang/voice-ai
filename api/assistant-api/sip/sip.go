@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/rapidaai/api/assistant-api/config"
 	internal_adapter "github.com/rapidaai/api/assistant-api/internal/adapters"
@@ -170,8 +171,12 @@ func (m *SIPEngine) Connect(ctx context.Context) error {
 	})
 	m.dispatcher.Start(m.ctx)
 
-	// Register all active SIP phone deployments
-	go m.registerAllAssistants(m.ctx)
+	// Register all active SIP phone deployments (with timeout to prevent zombie goroutines)
+	go func() {
+		regCtx, cancel := context.WithTimeout(m.ctx, 60*time.Second)
+		defer cancel()
+		m.registerAllAssistants(regCtx)
+	}()
 
 	return nil
 }
@@ -781,10 +786,7 @@ func (m *SIPEngine) pipelineCallSetup(ctx context.Context, session *sip_infra.Se
 		return nil, fmt.Errorf("failed to create conversation: %w", err)
 	}
 
-	if _, err := m.assistantConversationService.ApplyConversationMetadata(ctx, auth, assistant.Id, conversation.Id,
-		[]*types.Metadata{types.NewMetadata("sip.caller_uri", fromURI)}); err != nil {
-		m.logger.Warnw("Failed to apply conversation metadata", "call_id", session.GetCallID(), "error", err)
-	}
+	// sip.caller_uri metadata emitted by SIP pipeline handler via observer (after observer creation)
 
 	result := &sip_pipeline.CallSetupResult{
 		ConversationID:      conversation.Id,

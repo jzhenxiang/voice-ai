@@ -9,7 +9,9 @@ package sip_pipeline
 import (
 	"context"
 
+	obs "github.com/rapidaai/api/assistant-api/internal/observe"
 	sip_infra "github.com/rapidaai/api/assistant-api/sip/infra"
+	"github.com/rapidaai/pkg/types"
 )
 
 // handleSessionEstablished is the convergence point for inbound and outbound calls.
@@ -49,10 +51,26 @@ func (d *Dispatcher) handleSessionEstablished(ctx context.Context, v sip_infra.S
 		}
 	}
 
+	// Create and store hooks for this call (webhooks + analysis)
+	if d.onCreateHooks != nil {
+		hooks := d.onCreateHooks(ctx, v.Auth, v.AssistantID, setup.ConversationID)
+		if hooks != nil {
+			d.storeHooks(v.ID, hooks)
+			hooks.OnBegin(ctx)
+		}
+	}
+
+	// Emit caller URI metadata (was: direct ApplyConversationMetadata in pipelineCallSetup)
+	if o, ok := d.getObserver(v.ID); ok && v.FromURI != "" {
+		o.EmitMetadata(ctx, []*types.Metadata{
+			types.NewMetadata("sip.caller_uri", v.FromURI),
+		})
+	}
+
 	d.OnPipeline(ctx,
 		sip_infra.CallStartedPipeline{ID: v.ID, Session: v.Session},
-		sip_infra.EventEmittedPipeline{ID: v.ID, Event: "call_started", Data: map[string]string{
-			"direction": string(v.Direction),
+		sip_infra.EventEmittedPipeline{ID: v.ID, Event: obs.EventCallStarted, Data: map[string]string{
+			obs.DataDirection: string(v.Direction),
 		}},
 	)
 

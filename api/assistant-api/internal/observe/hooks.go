@@ -70,11 +70,11 @@ type SetMetadataFunc func(ctx context.Context, auth types.SimplePrinciple, metad
 //	hooks.OnEnd(ctx)        // call end (runs analysis, then webhooks)
 //	hooks.OnError(ctx)      // call failed
 type ConversationHooks struct {
-	logger          commons.Logger
-	snap            *ConversationSnapshot
-	invokeEndpoint  InvokeEndpointFunc
-	createLog       WebhookLogFunc
-	setMetadata     SetMetadataFunc
+	logger         commons.Logger
+	snap           *ConversationSnapshot
+	invokeEndpoint InvokeEndpointFunc
+	createLog      WebhookLogFunc
+	setMetadata    SetMetadataFunc
 }
 
 // ConversationHooksConfig holds dependencies for creating hooks.
@@ -148,7 +148,7 @@ func (h *ConversationHooks) OnEnd(ctx context.Context) {
 
 // fireWebhooks executes all webhooks subscribed to the given event.
 func (h *ConversationHooks) fireWebhooks(ctx context.Context, event utils.AssistantWebhookEvent) {
-	if h.snap.Assistant == nil {
+	if h.snap == nil || h.snap.Assistant == nil {
 		return
 	}
 	for _, webhook := range h.snap.Assistant.AssistantWebhooks {

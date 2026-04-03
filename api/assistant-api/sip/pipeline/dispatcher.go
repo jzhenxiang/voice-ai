@@ -62,11 +62,15 @@ type Dispatcher struct {
 	registrationClient *sip_infra.RegistrationClient
 
 	// Callbacks — injected by SIPEngine for operations requiring DB/vault/services.
-	didResolver     DIDResolverFunc
-	onCallSetup     OnCallSetupFunc
-	onCallStart     OnCallStartFunc
-	onCallEnd       OnCallEndFunc
+	didResolver      DIDResolverFunc
+	onCallSetup      OnCallSetupFunc
+	onCallStart      OnCallStartFunc
+	onCallEnd        OnCallEndFunc
 	onCreateObserver OnCreateObserverFunc
+	onCreateHooks    OnCreateHooksFunc
+
+	// Per-call hooks store (webhooks/analysis on call start/end/fail)
+	hooks map[string]*observe.ConversationHooks
 
 	// Pluggable stages — nil means skip
 	// callScreener  CallScreener
@@ -106,6 +110,9 @@ type OnCallEndFunc func(callID string)
 // SIPEngine implements this using the conversation service + telemetry providers.
 type OnCreateObserverFunc func(ctx context.Context, setup *CallSetupResult, auth types.SimplePrinciple) *observe.ConversationObserver
 
+// OnCreateHooksFunc creates ConversationHooks for a call (webhooks + analysis).
+type OnCreateHooksFunc func(ctx context.Context, auth types.SimplePrinciple, assistantID, conversationID uint64) *observe.ConversationHooks
+
 // DispatcherConfig holds dependencies for creating a Dispatcher.
 type DispatcherConfig struct {
 	Logger             commons.Logger
@@ -116,6 +123,7 @@ type DispatcherConfig struct {
 	OnCallStart        OnCallStartFunc
 	OnCallEnd          OnCallEndFunc
 	OnCreateObserver   OnCreateObserverFunc
+	OnCreateHooks      OnCreateHooksFunc
 }
 
 // NewDispatcher creates a SIP call pipeline dispatcher.
@@ -125,11 +133,13 @@ func NewDispatcher(cfg *DispatcherConfig) *Dispatcher {
 		server:             cfg.Server,
 		registrationClient: cfg.RegistrationClient,
 		observers:          make(map[string]*observe.ConversationObserver),
+		hooks:              make(map[string]*observe.ConversationHooks),
 		didResolver:        cfg.DIDResolver,
 		onCallSetup:        cfg.OnCallSetup,
 		onCallStart:        cfg.OnCallStart,
 		onCallEnd:          cfg.OnCallEnd,
 		onCreateObserver:   cfg.OnCreateObserver,
+		onCreateHooks:      cfg.OnCreateHooks,
 		signalCh:           make(chan callEnvelope, signalChSize),
 		setupCh:            make(chan callEnvelope, setupChSize),
 		mediaCh:            make(chan callEnvelope, mediaChSize),
@@ -187,6 +197,25 @@ func (d *Dispatcher) emitMetric(ctx context.Context, callID string, metrics []*p
 		return
 	}
 	obs.EmitMetric(ctx, metrics)
+}
+
+func (d *Dispatcher) storeHooks(callID string, h *observe.ConversationHooks) {
+	d.mu.Lock()
+	d.hooks[callID] = h
+	d.mu.Unlock()
+}
+
+func (d *Dispatcher) getHooks(callID string) (*observe.ConversationHooks, bool) {
+	d.mu.RLock()
+	h, ok := d.hooks[callID]
+	d.mu.RUnlock()
+	return h, ok
+}
+
+func (d *Dispatcher) removeHooks(callID string) {
+	d.mu.Lock()
+	delete(d.hooks, callID)
+	d.mu.Unlock()
 }
 
 // Start launches the four dispatcher goroutines. Call before any OnPipeline calls.
