@@ -70,20 +70,20 @@ type Dispatcher struct {
 	pendingResults map[string]chan<- *PipelineResult
 
 	// Callbacks — each stage has its own independent callback
-	onReceiveCall        OnReceiveCallFunc
-	onLoadAssistant      OnLoadAssistantFunc
-	onCreateConversation OnCreateConversationFunc
-	onSaveCallContext    OnSaveCallContextFunc
+	onReceiveCall             OnReceiveCallFunc
+	onLoadAssistant           OnLoadAssistantFunc
+	onCreateConversation      OnCreateConversationFunc
+	onSaveCallContext         OnSaveCallContextFunc
 	onAnswerProvider          OnAnswerProviderFunc
 	onDispatchOutbound        OnDispatchOutboundFunc
 	onApplyConversationExtras OnApplyConversationExtrasFunc
 	onResolveSession          OnResolveSessionFunc
-	onCreateStreamer     OnCreateStreamerFunc
-	onCreateTalker       OnCreateTalkerFunc
-	onRunTalk            OnRunTalkFunc
-	onCreateObserver     OnCreateObserverFunc
-	onCreateHooks        OnCreateHooksFunc
-	onCompleteSession    OnCompleteSessionFunc
+	onCreateStreamer          OnCreateStreamerFunc
+	onCreateTalker            OnCreateTalkerFunc
+	onRunTalk                 OnRunTalkFunc
+	onCreateObserver          OnCreateObserverFunc
+	onCreateHooks             OnCreateHooksFunc
+	onCompleteSession         OnCompleteSessionFunc
 }
 
 // OnReceiveCallFunc parses the provider webhook and returns CallInfo.
@@ -130,47 +130,47 @@ type OnCompleteSessionFunc func(ctx context.Context, contextID string)
 
 // DispatcherConfig holds dependencies for creating a channel dispatcher.
 type DispatcherConfig struct {
-	Logger               commons.Logger
-	OnReceiveCall        OnReceiveCallFunc
-	OnLoadAssistant      OnLoadAssistantFunc
-	OnCreateConversation OnCreateConversationFunc
-	OnSaveCallContext    OnSaveCallContextFunc
+	Logger                    commons.Logger
+	OnReceiveCall             OnReceiveCallFunc
+	OnLoadAssistant           OnLoadAssistantFunc
+	OnCreateConversation      OnCreateConversationFunc
+	OnSaveCallContext         OnSaveCallContextFunc
 	OnAnswerProvider          OnAnswerProviderFunc
 	OnDispatchOutbound        OnDispatchOutboundFunc
 	OnApplyConversationExtras OnApplyConversationExtrasFunc
 	OnResolveSession          OnResolveSessionFunc
-	OnCreateStreamer     OnCreateStreamerFunc
-	OnCreateTalker       OnCreateTalkerFunc
-	OnRunTalk            OnRunTalkFunc
-	OnCreateObserver     OnCreateObserverFunc
-	OnCreateHooks        OnCreateHooksFunc
-	OnCompleteSession    OnCompleteSessionFunc
+	OnCreateStreamer          OnCreateStreamerFunc
+	OnCreateTalker            OnCreateTalkerFunc
+	OnRunTalk                 OnRunTalkFunc
+	OnCreateObserver          OnCreateObserverFunc
+	OnCreateHooks             OnCreateHooksFunc
+	OnCompleteSession         OnCompleteSessionFunc
 }
 
 func NewDispatcher(cfg *DispatcherConfig) *Dispatcher {
 	return &Dispatcher{
-		logger:               cfg.Logger,
-		observers:      make(map[string]*observe.ConversationObserver),
-		hooks:          make(map[string]*observe.ConversationHooks),
-		pendingResults: make(map[string]chan<- *PipelineResult),
-		onReceiveCall:        cfg.OnReceiveCall,
-		onLoadAssistant:      cfg.OnLoadAssistant,
-		onCreateConversation: cfg.OnCreateConversation,
-		onSaveCallContext:    cfg.OnSaveCallContext,
+		logger:                    cfg.Logger,
+		observers:                 make(map[string]*observe.ConversationObserver),
+		hooks:                     make(map[string]*observe.ConversationHooks),
+		pendingResults:            make(map[string]chan<- *PipelineResult),
+		onReceiveCall:             cfg.OnReceiveCall,
+		onLoadAssistant:           cfg.OnLoadAssistant,
+		onCreateConversation:      cfg.OnCreateConversation,
+		onSaveCallContext:         cfg.OnSaveCallContext,
 		onAnswerProvider:          cfg.OnAnswerProvider,
 		onDispatchOutbound:        cfg.OnDispatchOutbound,
 		onApplyConversationExtras: cfg.OnApplyConversationExtras,
 		onResolveSession:          cfg.OnResolveSession,
-		onCreateStreamer:     cfg.OnCreateStreamer,
-		onCreateTalker:       cfg.OnCreateTalker,
-		onRunTalk:            cfg.OnRunTalk,
-		onCreateObserver:     cfg.OnCreateObserver,
-		onCreateHooks:        cfg.OnCreateHooks,
-		onCompleteSession:    cfg.OnCompleteSession,
-		signalCh:             make(chan callEnvelope, signalChSize),
-		setupCh:              make(chan callEnvelope, setupChSize),
-		mediaCh:              make(chan callEnvelope, mediaChSize),
-		controlCh:            make(chan callEnvelope, controlChSize),
+		onCreateStreamer:          cfg.OnCreateStreamer,
+		onCreateTalker:            cfg.OnCreateTalker,
+		onRunTalk:                 cfg.OnRunTalk,
+		onCreateObserver:          cfg.OnCreateObserver,
+		onCreateHooks:             cfg.OnCreateHooks,
+		onCompleteSession:         cfg.OnCompleteSession,
+		signalCh:                  make(chan callEnvelope, signalChSize),
+		setupCh:                   make(chan callEnvelope, setupChSize),
+		mediaCh:                   make(chan callEnvelope, mediaChSize),
+		controlCh:                 make(chan callEnvelope, controlChSize),
 	}
 }
 

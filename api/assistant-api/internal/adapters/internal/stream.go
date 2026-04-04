@@ -50,6 +50,11 @@ func (t *genericRequestor) Talk(_ context.Context, auth types.SimplePrinciple) e
 					Data:      map[string]string{obs.DataType: obs.EventConnectFailed, obs.DataError: err.Error()},
 					Time:      time.Now(),
 				})
+				t.onAddMetrics(context.Background(), &protos.Metric{
+					Name:        type_enums.CONVERSATION_STATUS.String(),
+					Value:       "FAILED",
+					Description: fmt.Sprintf("Connection failed: %v", err),
+				})
 				return fmt.Errorf("talking.Connect error: %w", err)
 			}
 			initialized = true

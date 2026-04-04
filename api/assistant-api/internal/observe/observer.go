@@ -77,44 +77,26 @@ func NewConversationObserver(cfg *ConversationObserverConfig) *ConversationObser
 	}
 }
 
-// EmitEvent records an event to both DB (as metadata) and telemetry exporters.
-//
-//	name: component name — "sip", "telephony", "session", etc.
-//	data: event-specific key/value pairs (always include "type")
+// EmitEvent sends an event to telemetry exporters only (no DB write).
+// Events are temporal — they belong in event streams, not the metadata table.
 func (o *ConversationObserver) EmitEvent(ctx context.Context, name string, data map[string]string) {
-	// Telemetry export (OpenSearch, OTLP, X-Ray, Datadog, etc.)
 	o.events.Collect(ctx, EventRecord{
-		MessageID: "", // call-level event, not scoped to a message turn
-		Name:      name,
-		Data:      data,
-		Time:      time.Now(),
+		Name: name,
+		Data: data,
+		Time: time.Now(),
 	})
-
-	if o.persist != nil {
-		metadata := make([]*types.Metadata, 0, len(data)+1)
-		metadata = append(metadata, types.NewMetadata(fmt.Sprintf("%s.event", name), dataType(data)))
-		for k, v := range data {
-			metadata = append(metadata, types.NewMetadata(fmt.Sprintf("%s.%s", name, k), v))
-		}
-		if err := o.persist.PersistMetadata(ctx, o.auth, o.meta.AssistantID, o.meta.AssistantConversationID, metadata); err != nil {
-			o.logger.Warnw("observer: failed to persist event metadata", "name", name, "error", err)
-		}
-	}
 }
 
-// EmitMetric records metrics to both DB and telemetry exporters.
+// EmitMetric persists metrics to DB and sends to telemetry exporters.
 func (o *ConversationObserver) EmitMetric(ctx context.Context, metrics []*protos.Metric) {
 	if len(metrics) == 0 {
 		return
 	}
-
-	// Telemetry export
 	o.metrics.Collect(ctx, ConversationMetricRecord{
 		ConversationID: fmt.Sprintf("%d", o.meta.AssistantConversationID),
 		Metrics:        metrics,
 		Time:           time.Now(),
 	})
-
 	if o.persist != nil {
 		converted := make([]*types.Metric, 0, len(metrics))
 		for _, pm := range metrics {
@@ -130,7 +112,7 @@ func (o *ConversationObserver) EmitMetric(ctx context.Context, metrics []*protos
 	}
 }
 
-// EmitMetadata records metadata to DB only (no telemetry export for raw metadata).
+// EmitMetadata persists metadata to DB only (no telemetry export).
 func (o *ConversationObserver) EmitMetadata(ctx context.Context, metadata []*types.Metadata) {
 	if len(metadata) == 0 {
 		return
@@ -164,11 +146,14 @@ func (o *ConversationObserver) Meta() SessionMeta {
 	return o.meta
 }
 
-func dataType(data map[string]string) string {
-	if t, ok := data["type"]; ok {
-		return t
+// ConversationState returns standard metadata entries for a conversation's identity.
+func ConversationState(provider, direction, callerNumber, contextID string) []*types.Metadata {
+	return []*types.Metadata{
+		types.NewMetadata("conversation.provider", provider),
+		types.NewMetadata("conversation.direction", direction),
+		types.NewMetadata("conversation.caller_number", callerNumber),
+		types.NewMetadata("conversation.context_id", contextID),
 	}
-	return "unknown"
 }
 
 // ServicePersister adapts any service with ApplyConversationMetrics/ApplyConversationMetadata

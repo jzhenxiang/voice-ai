@@ -12,7 +12,6 @@ import (
 
 	obs "github.com/rapidaai/api/assistant-api/internal/observe"
 	"github.com/rapidaai/pkg/types"
-	"github.com/rapidaai/protos"
 )
 
 func (d *Dispatcher) handleCallReceived(ctx context.Context, v CallReceivedPipeline, resultCh chan<- *PipelineResult) {
@@ -73,7 +72,6 @@ func (d *Dispatcher) handleWebhookParsed(ctx context.Context, v WebhookParsedPip
 func (d *Dispatcher) handleAssistantResolved(ctx context.Context, v AssistantResolvedPipeline) {
 	d.logger.Infow("Pipeline: AssistantResolved", "assistant_id", v.AssistantID)
 
-	// Create conversation
 	if d.onCreateConversation == nil || d.onSaveCallContext == nil {
 		d.failWithResult(v.ID, "assistant_resolved", ErrCallbackNotConfigured)
 		return
@@ -85,7 +83,6 @@ func (d *Dispatcher) handleAssistantResolved(ctx context.Context, v AssistantRes
 		return
 	}
 
-	// Save call context
 	contextID, err := d.onSaveCallContext(ctx, v.Auth, v.Assistant, conversationID, v.CallInfo, v.Provider)
 	if err != nil {
 		d.failWithResult(v.ID, "context_save", err)
@@ -131,14 +128,6 @@ func (d *Dispatcher) handleConversationCreated(ctx context.Context, v Conversati
 			}
 		}
 
-		// Status metric
-		if v.CallInfo.Status != "" {
-			d.emitMetric(ctx, v.ContextID, []*protos.Metric{
-				{Name: obs.MetricCallStatus, Value: v.CallInfo.Status, Description: "Call status"},
-			})
-		}
-
-		// Provider event
 		if v.CallInfo.StatusInfo.Event != "" {
 			d.emitEvent(ctx, v.ContextID, obs.ComponentTelephony, map[string]string{
 				obs.DataType:     v.CallInfo.StatusInfo.Event,
@@ -188,10 +177,6 @@ func (d *Dispatcher) handleProviderAnswering(ctx context.Context, v ProviderAnsw
 
 func (d *Dispatcher) handleProviderAnswered(ctx context.Context, v ProviderAnsweredPipeline) {
 	d.logger.Infow("Pipeline: ProviderAnswered", "context_id", v.ContextID)
-	d.emitEvent(ctx, v.ID, obs.ComponentTelephony, map[string]string{
-		obs.DataType:      obs.EventProviderAnswered,
-		obs.DataContextID: v.ContextID,
-	})
 }
 
 // resultChStore stores a result channel for a call (forwarded across stages).

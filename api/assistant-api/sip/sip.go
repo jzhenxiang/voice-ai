@@ -21,6 +21,7 @@ import (
 	internal_telephony "github.com/rapidaai/api/assistant-api/internal/channel/telephony"
 	internal_assistant_entity "github.com/rapidaai/api/assistant-api/internal/entity/assistants"
 	observe "github.com/rapidaai/api/assistant-api/internal/observe"
+	observe_exporters "github.com/rapidaai/api/assistant-api/internal/observe/exporters"
 	internal_services "github.com/rapidaai/api/assistant-api/internal/services"
 	internal_assistant_service "github.com/rapidaai/api/assistant-api/internal/services/assistant"
 	sip_infra "github.com/rapidaai/api/assistant-api/sip/infra"
@@ -787,6 +788,27 @@ func (m *SIPEngine) pipelineCallEnd(callID string) {
 }
 
 func (m *SIPEngine) createObserver(ctx context.Context, setup *sip_pipeline.CallSetupResult, auth types.SimplePrinciple) *observe.ConversationObserver {
+	meta := observe.SessionMeta{
+		AssistantID:             setup.AssistantID,
+		AssistantConversationID: setup.ConversationID,
+		ProjectID:               setup.ProjectID,
+		OrganizationID:          setup.OrganizationID,
+	}
+	var eventExporters []observe.EventExporter
+	var metricExporters []observe.MetricExporter
+	if m.cfg.TelemetryConfig != nil {
+		if envType := m.cfg.TelemetryConfig.Type(); envType != "" {
+			evtExp, metExp, err := observe_exporters.GetExporter(
+				ctx, m.logger, &m.cfg.AppConfig, m.opensearch, string(envType), m.cfg.TelemetryConfig.ToMap(),
+			)
+			if err != nil {
+				m.logger.Warnf("SIP observer: default exporter creation failed: %v", err)
+			} else if evtExp != nil && metExp != nil {
+				eventExporters = append(eventExporters, evtExp)
+				metricExporters = append(metricExporters, metExp)
+			}
+		}
+	}
 	return observe.NewConversationObserver(&observe.ConversationObserverConfig{
 		Logger:         m.logger,
 		Auth:           auth,
@@ -794,6 +816,8 @@ func (m *SIPEngine) createObserver(ctx context.Context, setup *sip_pipeline.Call
 		ConversationID: setup.ConversationID,
 		ProjectID:      setup.ProjectID,
 		OrganizationID: setup.OrganizationID,
-		Persist: m.assistantConversationService,
+		Persist:        m.assistantConversationService,
+		Events:         observe.NewEventCollector(m.logger, meta, eventExporters...),
+		Metrics:        observe.NewMetricCollector(m.logger, meta, metricExporters...),
 	})
 }

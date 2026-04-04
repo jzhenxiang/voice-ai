@@ -13,7 +13,6 @@ import (
 	obs "github.com/rapidaai/api/assistant-api/internal/observe"
 	internal_type "github.com/rapidaai/api/assistant-api/internal/type"
 	"github.com/rapidaai/pkg/types"
-	"github.com/rapidaai/protos"
 )
 
 // handleOutboundRequested drives the complete outbound call flow:
@@ -108,10 +107,12 @@ func (d *Dispatcher) handleOutboundRequested(ctx context.Context, v OutboundRequ
 		obs.DataContextID: contextID,
 	})
 
-	// Stage 7: Dispatch outbound call
 	if d.onDispatchOutbound != nil {
 		if err := d.onDispatchOutbound(ctx, contextID); err != nil {
 			d.logger.Error("Pipeline: outbound dispatch failed", "error", err)
+			d.emitEvent(ctx, contextID, obs.ComponentTelephony, map[string]string{
+				obs.DataType: obs.EventOutboundDispatchFailed, obs.DataError: err.Error(),
+			})
 			d.OnPipeline(ctx, CallFailedPipeline{ID: contextID, Stage: "dispatch", Error: err})
 			sendResult(resultCh, &PipelineResult{
 				ContextID:      contextID,
@@ -121,11 +122,6 @@ func (d *Dispatcher) handleOutboundRequested(ctx context.Context, v OutboundRequ
 			return
 		}
 	}
-
-	d.logger.Infow("Pipeline: OutboundDispatched",
-		"context_id", contextID,
-		"provider", provider,
-		"conversation_id", conversationID)
 
 	sendResult(resultCh, &PipelineResult{
 		ContextID:      contextID,
@@ -155,12 +151,6 @@ func (d *Dispatcher) handleOutboundDialed(ctx context.Context, v OutboundDialedP
 		if len(metadata) > 0 {
 			o.EmitMetadata(ctx, metadata)
 		}
-	}
-
-	if v.CallInfo.Status != "" {
-		d.emitMetric(ctx, v.ID, []*protos.Metric{
-			{Name: obs.MetricCallStatus, Value: v.CallInfo.Status, Description: "Outbound call status"},
-		})
 	}
 
 	if v.CallInfo.StatusInfo.Event != "" {

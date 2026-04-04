@@ -54,9 +54,11 @@ func (d *Dispatcher) handleSessionEstablished(ctx context.Context, v sip_infra.S
 		}
 	}
 
-	if o, ok := d.getObserver(v.ID); ok && v.FromURI != "" {
+	if o, ok := d.getObserver(v.ID); ok {
 		o.EmitMetadata(ctx, []*types.Metadata{
 			types.NewMetadata("sip.caller_uri", v.FromURI),
+			types.NewMetadata("conversation.direction", string(v.Direction)),
+			types.NewMetadata("conversation.provider", "sip"),
 		})
 	}
 

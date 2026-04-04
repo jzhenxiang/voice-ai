@@ -11,7 +11,6 @@ import (
 	"fmt"
 
 	obs "github.com/rapidaai/api/assistant-api/internal/observe"
-	"github.com/rapidaai/protos"
 )
 
 func (d *Dispatcher) handleDisconnectRequested(ctx context.Context, v DisconnectRequestedPipeline) {
@@ -36,11 +35,6 @@ func (d *Dispatcher) handleCallCompleted(ctx context.Context, v CallCompletedPip
 		obs.DataMessages: fmt.Sprintf("%d", v.Messages),
 	})
 
-	d.emitMetric(ctx, v.ID, []*protos.Metric{
-		{Name: obs.MetricCallDurationMs, Value: fmt.Sprintf("%d", v.Duration.Milliseconds()), Description: "Call duration"},
-		{Name: obs.MetricCallEndReason, Value: v.Reason, Description: "Call end reason"},
-	})
-
 	if hooks, ok := d.getHooks(v.ID); ok {
 		hooks.OnEnd(ctx)
 		d.removeHooks(v.ID)
@@ -59,10 +53,6 @@ func (d *Dispatcher) handleCallFailed(ctx context.Context, v CallFailedPipeline)
 		obs.DataType:  obs.EventCallFailed,
 		obs.DataStage: v.Stage,
 		obs.DataError: fmt.Sprintf("%v", v.Error),
-	})
-
-	d.emitMetric(ctx, v.ID, []*protos.Metric{
-		{Name: obs.MetricCallFailed, Value: v.Stage, Description: fmt.Sprintf("Call failed at %s: %v", v.Stage, v.Error)},
 	})
 
 	if hooks, ok := d.getHooks(v.ID); ok {

@@ -56,7 +56,6 @@ const (
 // =============================================================================
 
 const (
-	// --- Session lifecycle ---
 	EventConnected           = "connected"
 	EventConnectFailed       = "connect_failed"
 	EventDisconnected        = "disconnected"
@@ -64,8 +63,16 @@ const (
 	EventCompleted           = "completed"
 	EventModeSwitch          = "mode_switch"
 	EventResumed             = "resumed"
+	EventSessionResolved     = "session_resolved"
+	EventSessionResolveFailed = "session_resolve_failed"
+	EventStreamerCreated     = "streamer_created"
+	EventStreamerFailed      = "streamer_failed"
+	EventTalkerCreated       = "talker_created"
+	EventTalkerFailed        = "talker_failed"
+	EventTalkStarted         = "talk_started"
+	EventHooksBegin          = "hooks_begin"
+	EventHooksEnd            = "hooks_end"
 
-	// --- Call lifecycle (telephony + SIP) ---
 	EventCallReceived       = "call_received"
 	EventCallAnswered       = "call_answered"
 	EventCallStarted        = "call_started"
@@ -74,8 +81,13 @@ const (
 	EventCallCompleted      = "call_completed"
 	EventOutboundRequested  = "outbound_requested"
 	EventOutboundDialed     = "outbound_dialed"
+	EventOutboundDispatched = "outbound_dispatched"
+	EventOutboundDispatchFailed = "outbound_dispatch_failed"
 	EventProviderAnswered   = "provider_answered"
 	EventSessionConnected   = "session_connected"
+	EventAssistantLoaded    = "assistant_loaded"
+	EventConversationCreated = "conversation_created"
+	EventContextSaved       = "context_saved"
 
 	// --- SIP-specific ---
 	EventInviteReceived     = "invite_received"

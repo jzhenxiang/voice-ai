@@ -21,6 +21,7 @@ import (
 	channel_telephony "github.com/rapidaai/api/assistant-api/internal/channel/telephony"
 	internal_assistant_entity "github.com/rapidaai/api/assistant-api/internal/entity/assistants"
 	observe "github.com/rapidaai/api/assistant-api/internal/observe"
+	observe_exporters "github.com/rapidaai/api/assistant-api/internal/observe/exporters"
 	internal_type "github.com/rapidaai/api/assistant-api/internal/type"
 	internal_webrtc "github.com/rapidaai/api/assistant-api/internal/channel/webrtc"
 	internal_services "github.com/rapidaai/api/assistant-api/internal/services"
@@ -144,6 +145,27 @@ func newConversationApiCore(cfg *config.AssistantConfig, logger commons.Logger,
 			if oid := auth.GetCurrentOrganizationId(); oid != nil {
 				orgID = *oid
 			}
+			meta := observe.SessionMeta{
+				AssistantID:             assistantID,
+				AssistantConversationID: conversationID,
+				ProjectID:               projectID,
+				OrganizationID:          orgID,
+			}
+			var eventExporters []observe.EventExporter
+			var metricExporters []observe.MetricExporter
+			if cfg.TelemetryConfig != nil {
+				if envType := cfg.TelemetryConfig.Type(); envType != "" {
+					evtExp, metExp, err := observe_exporters.GetExporter(
+						ctx, logger, &cfg.AppConfig, opensearch, string(envType), cfg.TelemetryConfig.ToMap(),
+					)
+					if err != nil {
+						logger.Warnf("pipeline observer: default exporter creation failed: %v", err)
+					} else if evtExp != nil && metExp != nil {
+						eventExporters = append(eventExporters, evtExp)
+						metricExporters = append(metricExporters, metExp)
+					}
+				}
+			}
 			return observe.NewConversationObserver(&observe.ConversationObserverConfig{
 				Logger:         logger,
 				Auth:           auth,
@@ -151,7 +173,9 @@ func newConversationApiCore(cfg *config.AssistantConfig, logger commons.Logger,
 				ConversationID: conversationID,
 				ProjectID:      projectID,
 				OrganizationID: orgID,
-				Persist: conversationService,
+				Persist:        conversationService,
+				Events:         observe.NewEventCollector(logger, meta, eventExporters...),
+				Metrics:        observe.NewMetricCollector(logger, meta, metricExporters...),
 			})
 		},
 		OnCompleteSession: func(ctx context.Context, contextID string) {

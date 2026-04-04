@@ -8,6 +8,7 @@ package channel_pipeline
 
 import (
 	"context"
+	"fmt"
 
 	obs "github.com/rapidaai/api/assistant-api/internal/observe"
 )
@@ -24,6 +25,11 @@ func (d *Dispatcher) handleSessionConnected(ctx context.Context, v SessionConnec
 
 		d.logger.Infow("Pipeline: SessionConnected", "call_id", v.ID)
 
+		contextID := v.ContextID
+		if contextID == "" {
+			contextID = v.ID
+		}
+
 		if d.onResolveSession == nil {
 			sendResult(resultCh, &PipelineResult{Error: ErrCallbackNotConfigured})
 			return
@@ -31,6 +37,9 @@ func (d *Dispatcher) handleSessionConnected(ctx context.Context, v SessionConnec
 		cc, vc, err := d.onResolveSession(ctx, v.ContextID)
 		if err != nil {
 			d.logger.Error("Pipeline: session resolution failed", "call_id", v.ID, "error", err)
+			d.emitEvent(ctx, contextID, obs.ComponentSession, map[string]string{
+				obs.DataType: obs.EventSessionResolveFailed, obs.DataError: err.Error(),
+			})
 			sendResult(resultCh, &PipelineResult{Error: err})
 			return
 		}
@@ -42,6 +51,9 @@ func (d *Dispatcher) handleSessionConnected(ctx context.Context, v SessionConnec
 		streamer, err := d.onCreateStreamer(ctx, cc, vc, v.WebSocket, v.Conn, v.Reader, v.Writer)
 		if err != nil {
 			d.logger.Error("Pipeline: streamer creation failed", "call_id", v.ID, "error", err)
+			d.emitEvent(ctx, contextID, obs.ComponentSession, map[string]string{
+				obs.DataType: obs.EventStreamerFailed, obs.DataError: err.Error(), obs.DataProvider: cc.Provider,
+			})
 			sendResult(resultCh, &PipelineResult{Error: err})
 			return
 		}
@@ -53,15 +65,14 @@ func (d *Dispatcher) handleSessionConnected(ctx context.Context, v SessionConnec
 		talker, err := d.onCreateTalker(ctx, streamer)
 		if err != nil {
 			d.logger.Error("Pipeline: talker creation failed", "call_id", v.ID, "error", err)
+			d.emitEvent(ctx, contextID, obs.ComponentSession, map[string]string{
+				obs.DataType: obs.EventTalkerFailed, obs.DataError: err.Error(),
+			})
 			sendResult(resultCh, &PipelineResult{Error: err})
 			return
 		}
 
 		auth := cc.ToAuth()
-		contextID := v.ContextID
-		if contextID == "" {
-			contextID = v.ID
-		}
 
 		if _, exists := d.getObserver(contextID); !exists && d.onCreateObserver != nil {
 			o := d.onCreateObserver(ctx, contextID, auth, cc.AssistantID, cc.ConversationID)
@@ -83,6 +94,10 @@ func (d *Dispatcher) handleSessionConnected(ctx context.Context, v SessionConnec
 			obs.DataProvider: cc.Provider,
 		})
 
+		if o, ok := d.getObserver(contextID); ok {
+			o.EmitMetadata(ctx, obs.ConversationState(cc.Provider, cc.Direction, cc.CallerNumber, contextID))
+		}
+
 		if d.onRunTalk == nil {
 			sendResult(resultCh, &PipelineResult{Error: ErrCallbackNotConfigured})
 			return
@@ -94,9 +109,13 @@ func (d *Dispatcher) handleSessionConnected(ctx context.Context, v SessionConnec
 			d.removeHooks(contextID)
 		}
 
+		reason := "talk_completed"
+		if talkErr != nil {
+			reason = fmt.Sprintf("talk_error: %v", talkErr)
+		}
 		d.emitEvent(ctx, contextID, obs.ComponentSession, map[string]string{
 			obs.DataType:   obs.EventCallCompleted,
-			obs.DataReason: "talk_completed",
+			obs.DataReason: reason,
 		})
 
 		d.removeObserver(ctx, contextID)

@@ -12,7 +12,6 @@ import (
 
 	obs "github.com/rapidaai/api/assistant-api/internal/observe"
 	sip_infra "github.com/rapidaai/api/assistant-api/sip/infra"
-	"github.com/rapidaai/protos"
 )
 
 func (d *Dispatcher) handleByeReceived(ctx context.Context, v sip_infra.ByeReceivedPipeline) {
@@ -58,14 +57,8 @@ func (d *Dispatcher) handleCallEnded(ctx context.Context, v sip_infra.CallEndedP
 		"reason", v.Reason)
 
 	d.emitEvent(ctx, v.ID, obs.ComponentSIP, map[string]string{
-		obs.DataType:     obs.EventCallEnded,
-		obs.DataReason:   v.Reason,
-		obs.DataDuration: fmt.Sprintf("%d", v.Duration.Milliseconds()),
-	})
-
-	d.emitMetric(ctx, v.ID, []*protos.Metric{
-		{Name: obs.MetricCallDurationMs, Value: fmt.Sprintf("%d", v.Duration.Milliseconds()), Description: "SIP call duration"},
-		{Name: obs.MetricCallEndReason, Value: v.Reason, Description: "Call end reason"},
+		obs.DataType:   obs.EventCallEnded,
+		obs.DataReason: v.Reason,
 	})
 
 	if hooks, ok := d.getHooks(v.ID); ok {
@@ -90,10 +83,6 @@ func (d *Dispatcher) handleCallFailed(ctx context.Context, v sip_infra.CallFaile
 		obs.DataType:  obs.EventCallFailed,
 		obs.DataError: fmt.Sprintf("%v", v.Error),
 		"sip_code":    fmt.Sprintf("%d", v.SIPCode),
-	})
-
-	d.emitMetric(ctx, v.ID, []*protos.Metric{
-		{Name: obs.MetricCallFailed, Value: fmt.Sprintf("%v", v.Error), Description: "SIP call failure"},
 	})
 
 	if hooks, ok := d.getHooks(v.ID); ok {
