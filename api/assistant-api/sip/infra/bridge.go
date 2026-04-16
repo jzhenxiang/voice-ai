@@ -113,6 +113,9 @@ func (s *Server) BridgeTransfer(ctx context.Context, inbound, outbound *Session)
 
 	// Wait for either side to hang up
 	select {
+	case <-ctx.Done():
+		s.logger.Infow("Bridge: context cancelled",
+			"inbound_call_id", inCallID, "outbound_call_id", outCallID, "error", ctx.Err())
 	case <-inbound.ByeReceived():
 		s.logger.Infow("Bridge: inbound caller hung up", "inbound_call_id", inCallID)
 	case <-outbound.ByeReceived():
