@@ -127,16 +127,12 @@ func (t *sipTelephony) OutboundCall(
 		return info, fmt.Errorf("shared SIP server is not running")
 	}
 
-	// Metadata must be set before MakeCall — on fast LANs the 200 OK arrives
-	// before the caller gets a chance to set it, causing a race.
-	callMetadata := map[string]interface{}{
-		"assistant_id":    assistantId,
-		"conversation_id": assistantConversationId,
-		"to_phone":        toPhone,
-		"auth":            auth,
-		"sip_config":      cfg,
-	}
-	session, err := t.sharedServer.MakeCall(context.Background(), cfg, toPhone, fromPhone, callMetadata)
+	session, err := t.sharedServer.MakeCall(context.Background(), cfg, toPhone, fromPhone, sip_infra.MakeCallOptions{
+		Auth:            auth,
+		AssistantID:     assistantId,
+		ConversationID:  assistantConversationId,
+		VaultCredential: vaultCredential,
+	})
 	if err != nil {
 		info.Status = "FAILED"
 		info.ErrorMessage = fmt.Sprintf("call error: %s", err.Error())

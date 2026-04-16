@@ -18,7 +18,9 @@ import (
 	"github.com/emiago/sipgo"
 	"github.com/emiago/sipgo/sip"
 	"github.com/google/uuid"
+	internal_assistant_entity "github.com/rapidaai/api/assistant-api/internal/entity/assistants"
 	"github.com/rapidaai/pkg/commons"
+	"github.com/rapidaai/pkg/types"
 	"github.com/rapidaai/protos"
 )
 
@@ -35,9 +37,9 @@ type SessionConfig struct {
 	CallID          string // Optional: if empty, a new UUID will be generated
 	Codec           *Codec
 	Logger          commons.Logger
-	Auth            interface{}             // Authentication principal (types.SimplePrinciple)
-	Assistant       interface{}             // Assistant entity (*internal_assistant_entity.Assistant)
-	VaultCredential *protos.VaultCredential // Vault-resolved SIP provider credential
+	Auth            types.SimplePrinciple                  // Authentication principal
+	Assistant       *internal_assistant_entity.Assistant    // Assistant entity
+	VaultCredential *protos.VaultCredential                 // Vault-resolved SIP provider credential
 }
 
 // Session manages a single SIP call session
@@ -67,9 +69,9 @@ type Session struct {
 	metadata map[string]interface{}
 
 	// Authentication and authorization context - available in all session methods
-	auth            interface{}             // Authentication principal (types.SimplePrinciple)
-	assistant       interface{}             // Assistant entity (*internal_assistant_entity.Assistant)
-	vaultCredential *protos.VaultCredential // Vault-resolved SIP provider credential
+	auth            types.SimplePrinciple                  // Authentication principal
+	assistant       *internal_assistant_entity.Assistant    // Assistant entity
+	vaultCredential *protos.VaultCredential                 // Vault-resolved SIP provider credential
 
 	// byeReceived is closed when a SIP BYE is received for this session.
 	// Used to notify startCall about early BYE without fully ending the session.
@@ -474,17 +476,15 @@ func (s *Session) Disconnect() {
 	}
 }
 
-// GetAuth returns the authentication principal (types.SimplePrinciple) for this session.
-// Available in all session methods after session creation.
-func (s *Session) GetAuth() interface{} {
+// GetAuth returns the authentication principal for this session.
+func (s *Session) GetAuth() types.SimplePrinciple {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.auth
 }
 
 // GetAssistant returns the assistant entity for this session.
-// Available in all session methods after session creation.
-func (s *Session) GetAssistant() interface{} {
+func (s *Session) GetAssistant() *internal_assistant_entity.Assistant {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.assistant
