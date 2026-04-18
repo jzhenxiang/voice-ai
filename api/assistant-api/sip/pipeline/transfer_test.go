@@ -222,6 +222,68 @@ func TestTransferPipelineStages_CallID(t *testing.T) {
 }
 
 // =============================================================================
+// handleTransferInitiated — OnTeardown vs OnFailed contract
+// =============================================================================
+
+func TestHandleTransferInitiated_OnTeardownNotCalledOnFailure(t *testing.T) {
+	t.Parallel()
+
+	// When the server is nil, MakeBridgeCall cannot succeed.
+	// OnFailed must be called, and OnTeardown must NOT be called.
+	// OnTeardown is reserved for the bridge teardown path (after BridgeTransfer returns).
+
+	var failedCalled atomic.Bool
+	var teardownCalled atomic.Bool
+
+	d := NewDispatcher(&DispatcherConfig{
+		Logger: newPipelineTestLogger(t),
+		// server is nil — MakeBridgeCall will fail
+	})
+
+	s := newTransferTestSession(t)
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		d.executeTransfer(context.Background(), sip_infra.TransferInitiatedPipeline{
+			ID:        s.GetCallID(),
+			Session:   s,
+			TargetURI: "918031405561",
+			Config:    newTransferTestConfig(),
+			OnFailed: func() {
+				failedCalled.Store(true)
+			},
+			OnTeardown: func() {
+				teardownCalled.Store(true)
+			},
+		})
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("executeTransfer did not return")
+	}
+
+	assert.True(t, failedCalled.Load(), "OnFailed must be called when server is nil")
+	assert.False(t, teardownCalled.Load(), "OnTeardown must NOT be called on failure — only on bridge teardown")
+}
+
+func TestTransferInitiatedPipeline_HasOnTeardownField(t *testing.T) {
+	// Compile-time contract: TransferInitiatedPipeline must have an OnTeardown field.
+	// If the field is removed or renamed, this test fails at compile time.
+	var called bool
+	p := sip_infra.TransferInitiatedPipeline{
+		ID:        "contract-test",
+		OnFailed:  func() {},
+		OnTeardown: func() { called = true },
+	}
+	// Verify the field is callable
+	p.OnTeardown()
+	assert.True(t, called, "OnTeardown must be callable")
+}
+
+// =============================================================================
 // Session state transitions
 // =============================================================================
 

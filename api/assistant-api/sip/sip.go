@@ -930,6 +930,7 @@ func (m *SIPEngine) pipelineCallStart(ctx context.Context, session *sip_infra.Se
 	type transferable interface {
 		SetOnTransferInitiated(func(string))
 		SetBridgeOutRTP(*sip_infra.RTPHandler)
+		ClearBridgeTarget()
 		StopRingback()
 		ExitTransferMode()
 		CancelTalk()
@@ -946,7 +947,8 @@ func (m *SIPEngine) pipelineCallStart(ctx context.Context, session *sip_infra.Se
 					ts.SetBridgeOutRTP(outboundRTP)
 					ts.CancelTalk()
 				},
-				OnFailed: func() { ts.ExitTransferMode() },
+				OnFailed:   func() { ts.ExitTransferMode() },
+				OnTeardown: func() { ts.ClearBridgeTarget() },
 			})
 		})
 	}

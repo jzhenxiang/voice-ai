@@ -85,9 +85,20 @@ func (d *Dispatcher) executeTransfer(ctx context.Context, v sip_infra.TransferIn
 		d.logger.Errorw("Pipeline: bridge failed",
 			"call_id", v.ID, "error", err)
 		v.Session.SetMetadata(sip_infra.MetadataBridgeTransferStatus, "failed")
-		return
+	} else {
+		v.Session.SetMetadata(sip_infra.MetadataBridgeTransferStatus, "completed")
 	}
-	v.Session.SetMetadata(sip_infra.MetadataBridgeTransferStatus, "completed")
+
+	if v.OnTeardown != nil {
+		v.OnTeardown()
+	}
+
+	// End the inbound session after metadata is written. This unblocks
+	// pipelineCallStart's session wait, which then reads the metadata
+	// for observer events. BridgeTransfer only ends the outbound leg.
+	if !v.Session.IsEnded() {
+		v.Session.End()
+	}
 }
 
 func (d *Dispatcher) handleTransferConnected(ctx context.Context, v sip_infra.TransferConnectedPipeline) {

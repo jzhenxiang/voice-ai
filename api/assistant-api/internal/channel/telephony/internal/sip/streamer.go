@@ -44,9 +44,10 @@ type Streamer struct {
 	session    *sip_infra.Session
 	rtpHandler *sip_infra.RTPHandler
 
-	transferring    atomic.Bool
-	bridgeTarget    atomic.Pointer[bridgeState]
-	ringbackCancel  context.CancelFunc
+	transferring        atomic.Bool
+	bridgeTarget        atomic.Pointer[bridgeState]
+	ringbackCancel      context.CancelFunc
+	writerDone          chan struct{}
 	onTransferInitiated func(target string)
 
 	ctx    context.Context
@@ -70,8 +71,9 @@ func NewStreamer(ctx context.Context,
 			logger, cc, vaultCred,
 			internal_telephony_base.WithSourceAudioConfig(internal_audio.NewMulaw8khzMonoAudioConfig()),
 		),
-		ctx:    streamerCtx,
-		cancel: cancel,
+		writerDone: make(chan struct{}),
+		ctx:        streamerCtx,
+		cancel:     cancel,
 	}
 
 	// Bridge SIP context to BaseStreamer so Recv() returns io.EOF on session end.
@@ -112,29 +114,24 @@ func (s *Streamer) forwardIncomingAudio() {
 	rtpHandler := s.rtpHandler
 	s.mu.RUnlock()
 	if rtpHandler == nil {
-		s.Logger.Warnw("forwardIncomingAudio: no RTP handler, exiting")
 		return
 	}
-	defer s.Logger.Infow("forwardIncomingAudio: exited",
-		"ctx_err", s.ctx.Err(),
-		"bridged", s.bridgeTarget.Load() != nil)
 	bufferThreshold := s.InputBufferThreshold()
 	for {
 		select {
 		case <-s.ctx.Done():
-			s.Logger.Infow("forwardIncomingAudio: ctx done", "err", s.ctx.Err())
 			return
 		case audioData, ok := <-rtpHandler.AudioIn():
 			if !ok {
-				s.Logger.Infow("forwardIncomingAudio: AudioIn channel closed")
 				return
 			}
 			if bs := s.bridgeTarget.Load(); bs != nil {
 				if bs.transcode != nil {
 					audioData = bs.transcode(audioData)
 				}
-				if !s.trySendBridge(bs, audioData) {
-					s.bridgeTarget.Store(nil)
+				select {
+				case bs.outRTP.AudioOut() <- audioData:
+				default:
 				}
 				continue
 			}
@@ -216,7 +213,7 @@ func (s *Streamer) sendAudio(audioData []byte) error {
 	}
 
 	if codec != nil && codec.Name == "PCMA" {
-		outData = s.mulawToAlaw(outData)
+		outData = internal_audio.UlawToAlaw(outData)
 	}
 
 	s.BufferAndSendOutput(outData)
@@ -224,6 +221,7 @@ func (s *Streamer) sendAudio(audioData []byte) error {
 }
 
 // runRTPWriter paces 20ms audio frames from OutputCh to the RTP handler at real-time rate.
+// Exits when s.ctx is done or writerDone is closed (bridge mode).
 func (s *Streamer) runRTPWriter() {
 	const pacingInterval = 20 * time.Millisecond
 	ticker := time.NewTicker(pacingInterval)
@@ -232,6 +230,8 @@ func (s *Streamer) runRTPWriter() {
 	for {
 		select {
 		case <-s.ctx.Done():
+			return
+		case <-s.writerDone:
 			return
 
 		case <-s.FlushAudioCh:
@@ -324,10 +324,6 @@ func (s *Streamer) ExitTransferMode() {
 	s.Logger.Infow("Transfer mode: exited, AI resuming")
 }
 
-func (s *Streamer) IsTransferring() bool {
-	return s.transferring.Load()
-}
-
 func (s *Streamer) StopRingback() {
 	s.mu.RLock()
 	cancelFn := s.ringbackCancel
@@ -339,7 +335,16 @@ func (s *Streamer) StopRingback() {
 }
 
 func (s *Streamer) CancelTalk() {
+	select {
+	case <-s.writerDone:
+	default:
+		close(s.writerDone)
+	}
 	s.BaseStreamer.Cancel()
+}
+
+func (s *Streamer) ClearBridgeTarget() {
+	s.bridgeTarget.Store(nil)
 }
 
 func (s *Streamer) SetBridgeOutRTP(rtp *sip_infra.RTPHandler) {
@@ -366,6 +371,15 @@ func (s *Streamer) SetOnTransferInitiated(fn func(target string)) {
 }
 
 func (s *Streamer) playRingback(ctx context.Context) {
+	s.mu.RLock()
+	rtpHandler := s.rtpHandler
+	s.mu.RUnlock()
+	if rtpHandler == nil || !rtpHandler.IsRunning() {
+		return
+	}
+
+	codec := rtpHandler.GetCodec()
+
 	ticker := time.NewTicker(20 * time.Millisecond)
 	defer ticker.Stop()
 
@@ -376,8 +390,16 @@ func (s *Streamer) playRingback(ctx context.Context) {
 			return
 		case <-ticker.C:
 			var frame []byte
-			frame, offset = internal_audio.GenerateRingbackFrame(offset)
-			_ = s.sendAudio(frame)
+			frame, offset = internal_audio.GenerateRingbackMulawFrame(offset)
+			if codec != nil && codec.Name == "PCMA" {
+				frame = internal_audio.UlawToAlaw(frame)
+			}
+			select {
+			case rtpHandler.AudioOut() <- frame:
+			case <-ctx.Done():
+				return
+			default:
+			}
 		}
 	}
 }
@@ -405,24 +427,6 @@ func (s *Streamer) Close() error {
 
 	s.Logger.Infow("SIP streamer closed")
 	return nil
-}
-
-func (s *Streamer) trySendBridge(bs *bridgeState, data []byte) (ok bool) {
-	defer func() {
-		if r := recover(); r != nil {
-			ok = false
-		}
-	}()
-	select {
-	case bs.outRTP.AudioOut() <- data:
-		return true
-	default:
-		return true
-	}
-}
-
-func (s *Streamer) mulawToAlaw(in []byte) []byte {
-	return internal_audio.UlawToAlaw(in)
 }
 
 // extractTransferTarget reads the "to" field from a ConversationDirective's Args map.

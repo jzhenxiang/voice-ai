@@ -140,11 +140,13 @@ func (s *Server) BridgeTransfer(ctx context.Context, inbound, outbound *Session)
 	}
 
 	audioCancel()
+
+	// End the outbound (bridge) leg — this is infrastructure-only, owned by us.
+	// The inbound session lifecycle is owned by the caller (pipelineCallStart or
+	// handleBye). Ending it here would race with metadata writes in executeTransfer
+	// and with the observer teardown in media.go.
 	if !outbound.IsEnded() {
 		outbound.End()
-	}
-	if !inbound.IsEnded() {
-		inbound.End()
 	}
 
 	s.logger.Infow("Audio bridge completed",
@@ -154,15 +156,12 @@ func (s *Server) BridgeTransfer(ctx context.Context, inbound, outbound *Session)
 
 // forwardBridgeAudio reads audio from src and writes to dst, transcoding if needed.
 func (s *Server) forwardBridgeAudio(ctx context.Context, src <-chan []byte, dst chan<- []byte, needsTranscode bool, srcCodec, dstCodec *Codec) {
-	defer s.logger.Infow("forwardBridgeAudio: exited", "ctx_err", ctx.Err())
 	for {
 		select {
 		case <-ctx.Done():
-			s.logger.Infow("forwardBridgeAudio: ctx done", "err", ctx.Err())
 			return
 		case data, ok := <-src:
 			if !ok {
-				s.logger.Infow("forwardBridgeAudio: src channel closed")
 				return
 			}
 			if needsTranscode {

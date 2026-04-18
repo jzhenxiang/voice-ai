@@ -67,6 +67,7 @@ type TransferInitiatedPipeline struct {
 	Config      *Config
 	OnConnected func(outboundRTP *RTPHandler)
 	OnFailed    func()
+	OnTeardown  func()
 }
 
 func (p TransferInitiatedPipeline) CallID() string { return p.ID }
