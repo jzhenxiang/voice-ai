@@ -4,11 +4,12 @@
 // Licensed under GPL-2.0 with Rapida Additional Terms.
 // See LICENSE.md or contact sales@rapida.ai for commercial usage.
 
-package internal_transformer_cartesia
+package cartesia_internal
 
 import (
 	"testing"
 
+	testutil "github.com/rapidaai/api/assistant-api/internal/transformer/internal/testutil"
 	"github.com/rapidaai/pkg/commons"
 	"github.com/rapidaai/pkg/utils"
 	"github.com/stretchr/testify/assert"
@@ -40,7 +41,7 @@ func TestNewCartesiaNormalizer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			logger := newTestLogger()
+			logger := testutil.NewTestLogger()
 			normalizer := NewCartesiaNormalizer(logger, tt.opts)
 			require.NotNil(t, normalizer)
 			cn, ok := normalizer.(*cartesiaNormalizer)
@@ -51,7 +52,7 @@ func TestNewCartesiaNormalizer(t *testing.T) {
 }
 
 func TestNormalize_Passthrough(t *testing.T) {
-	logger := newTestLogger()
+	logger := testutil.NewTestLogger()
 	normalizer := NewCartesiaNormalizer(logger, utils.Option{})
 
 	tests := []struct {
@@ -74,7 +75,7 @@ func TestNormalize_Passthrough(t *testing.T) {
 }
 
 func TestNormalize_NoSSML(t *testing.T) {
-	logger := newTestLogger()
+	logger := testutil.NewTestLogger()
 	normalizer := NewCartesiaNormalizer(logger, utils.Option{})
 
 	result := normalizer.Normalize("Tom & Jerry")

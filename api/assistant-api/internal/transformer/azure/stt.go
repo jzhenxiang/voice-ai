@@ -143,9 +143,9 @@ func (s *azureSpeechToText) Transform(_ context.Context, in internal_type.Packet
 		s.contextId = pkt.ContextID
 		s.mu.Unlock()
 		return nil
-	case internal_type.InterruptionDetectedPacket:
+	case internal_type.STTInterruptPacket:
 		s.mu.Lock()
-		if pkt.Source == internal_type.InterruptionSourceVad && s.startedAt.IsZero() {
+		if s.startedAt.IsZero() {
 			s.startedAt = time.Now()
 		}
 		s.mu.Unlock()

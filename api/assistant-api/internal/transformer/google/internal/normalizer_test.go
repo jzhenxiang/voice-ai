@@ -4,11 +4,12 @@
 // Licensed under GPL-2.0 with Rapida Additional Terms.
 // See LICENSE.md or contact sales@rapida.ai for commercial usage.
 
-package internal_transformer_google
+package google_internal
 
 import (
 	"testing"
 
+	testutil "github.com/rapidaai/api/assistant-api/internal/transformer/internal/testutil"
 	"github.com/rapidaai/pkg/commons"
 	"github.com/rapidaai/pkg/utils"
 	"github.com/stretchr/testify/assert"
@@ -21,7 +22,7 @@ import (
 
 func newTestGoogleNormalizer(t *testing.T, opts utils.Option) *googleNormalizer {
 	t.Helper()
-	logger := newTestLogger()
+	logger := testutil.NewTestLogger() // Use testutil logger for better test output integration
 	normalizer := NewGoogleNormalizer(logger, opts)
 	gn, ok := normalizer.(*googleNormalizer)
 	require.True(t, ok, "expected *googleNormalizer type")
@@ -75,7 +76,6 @@ func TestNewGoogleNormalizer(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			gn := newTestGoogleNormalizer(t, tt.opts)
-			assert.Equal(t, tt.expectedLang, gn.language)
 			assert.NotNil(t, gn.logger)
 			if tt.hasConj {
 				assert.NotNil(t, gn.conjunctionPattern)

@@ -65,7 +65,6 @@ func (r *genericRequestor) OnPacket(ctx context.Context, pkts ...internal_type.P
 		case internal_type.LLMResponseDeltaPacket,
 			internal_type.LLMResponseDonePacket,
 			internal_type.ErrorPacket,
-			internal_type.TTSErrorPacket,
 			internal_type.InjectMessagePacket,
 			internal_type.TTSTextPacket,
 			internal_type.TTSDonePacket,
@@ -702,7 +701,8 @@ func (talking *genericRequestor) handleErrorPacket(ctx context.Context, vl inter
 			&protos.ConversationError{
 				AssistantConversationId: talking.Conversation().Id,
 				Message:                 vl.ErrMessage(),
-			}, &protos.ConversationDisconnection{
+			},
+			&protos.ConversationDisconnection{
 				Type: protos.ConversationDisconnection_DISCONNECTION_TYPE_UNSPECIFIED,
 			})
 		return

@@ -4,7 +4,7 @@
 // Licensed under GPL-2.0 with Rapida Additional Terms.
 // See LICENSE.md or contact sales@rapida.ai for commercial usage.
 
-package internal_transformer_google
+package google_internal
 
 import (
 	"fmt"
@@ -19,26 +19,30 @@ import (
 // =============================================================================
 // Google Text Normalizer
 // =============================================================================
+// NormalizerConfig holds SSML conjunction break configuration for providers
+// that support pauses (Google, Azure, AWS, ElevenLabs, Rime).
+type NormalizerConfig struct {
+	Conjunctions    []string
+	PauseDurationMs uint64
+}
+
+func DefaultNormalizerConfig() NormalizerConfig {
+	return NormalizerConfig{
+		PauseDurationMs: 240,
+	}
+}
 
 // googleNormalizer handles Google Cloud TTS text preprocessing.
 // Google supports standard W3C SSML with some Google-specific extensions.
 type googleNormalizer struct {
-	logger   commons.Logger
-	config   internal_type.NormalizerConfig
-	language string
-
-	// conjunction handling
+	logger             commons.Logger
+	config             NormalizerConfig
 	conjunctionPattern *regexp.Regexp
 }
 
 // NewGoogleNormalizer creates a Google-specific text normalizer.
 func NewGoogleNormalizer(logger commons.Logger, opts utils.Option) internal_type.TextNormalizer {
-	cfg := internal_type.DefaultNormalizerConfig()
-
-	language, _ := opts.GetString("speaker.language")
-	if language == "" {
-		language = "en-US"
-	}
+	cfg := DefaultNormalizerConfig()
 	var conjunctionPattern *regexp.Regexp
 	if conjunctionBoundaries, err := opts.GetString("speaker.conjunction.boundaries"); err == nil && conjunctionBoundaries != "" {
 		cfg.Conjunctions = strings.Split(conjunctionBoundaries, commons.SEPARATOR)
@@ -50,15 +54,12 @@ func NewGoogleNormalizer(logger commons.Logger, opts utils.Option) internal_type
 		conjunctionPattern = regexp.MustCompile(pattern)
 	}
 
-	// Parse conjunction break duration
 	if conjunctionBreak, err := opts.GetUint64("speaker.conjunction.break"); err == nil {
 		cfg.PauseDurationMs = conjunctionBreak
 	}
-
 	return &googleNormalizer{
 		logger:             logger,
 		config:             cfg,
-		language:           language,
 		conjunctionPattern: conjunctionPattern,
 	}
 }

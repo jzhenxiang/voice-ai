@@ -182,11 +182,6 @@ func (azure *azureTextToSpeech) Transform(ctx context.Context, in internal_type.
 	}
 	azure.mu.Unlock()
 	if cl == nil {
-		azure.onPacket(internal_type.TTSErrorPacket{
-			ContextID: in.ContextId(),
-			Error:     fmt.Errorf("azure-tts: client not initialized"),
-			Type:      internal_type.TTSNetworkTimeout,
-		})
 		return nil
 	}
 

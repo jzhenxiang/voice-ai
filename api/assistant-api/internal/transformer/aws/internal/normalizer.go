@@ -4,14 +4,14 @@
 // Licensed under GPL-2.0 with Rapida Additional Terms.
 // See LICENSE.md or contact sales@rapida.ai for commercial usage.
 
-package internal_transformer_aws
+package aws_internal
 
 import (
 	"fmt"
 	"regexp"
 	"strings"
 
-	internal_type "github.com/rapidaai/api/assistant-api/internal/type"
+	aws_internal "github.com/rapidaai/api/assistant-api/internal/type"
 	"github.com/rapidaai/pkg/commons"
 	"github.com/rapidaai/pkg/utils"
 )
@@ -23,16 +23,14 @@ import (
 // awsNormalizer handles AWS Polly TTS text preprocessing.
 // AWS Polly supports full SSML with Amazon-specific extensions.
 type awsNormalizer struct {
-	logger commons.Logger
-	config internal_type.NormalizerConfig
-
-	// conjunction handling
+	logger             commons.Logger
+	config             aws_internal.NormalizerConfig
 	conjunctionPattern *regexp.Regexp
 }
 
 // NewAWSNormalizer creates an AWS Polly-specific text normalizer.
-func NewAWSNormalizer(logger commons.Logger, opts utils.Option) internal_type.TextNormalizer {
-	cfg := internal_type.DefaultNormalizerConfig()
+func NewAWSNormalizer(logger commons.Logger, opts utils.Option) aws_internal.TextNormalizer {
+	cfg := aws_internal.DefaultNormalizerConfig()
 
 	// Parse conjunction boundaries from options
 	var conjunctionPattern *regexp.Regexp

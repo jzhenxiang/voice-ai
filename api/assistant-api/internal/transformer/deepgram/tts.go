@@ -61,7 +61,7 @@ func NewDeepgramTextToSpeech(ctx context.Context, logger commons.Logger, credent
 		ctxCancel:      cancel,
 		logger:         logger,
 		onPacket:       onPacket,
-		normalizer:     NewDeepgramNormalizer(logger, opts),
+		normalizer:     deepgram_internal.NewDeepgramNormalizer(logger, opts),
 	}, nil
 }
 
@@ -205,7 +205,7 @@ func (t *deepgramTTS) Transform(ctx context.Context, in internal_type.Packet) er
 	t.mu.Unlock()
 
 	switch input := in.(type) {
-	case internal_type.InterruptionDetectedPacket:
+	case internal_type.TTSInterruptPacket:
 		t.mu.Lock()
 		t.contextId = ""
 		t.ttsStartedAt = time.Time{}
@@ -227,7 +227,6 @@ func (t *deepgramTTS) Transform(ctx context.Context, in internal_type.Packet) er
 		return nil
 
 	case internal_type.TTSTextPacket:
-		// Fallback reconnect: handles Initialize() failure or an unintentional drop.
 		if connection == nil {
 			if err := t.Initialize(); err != nil {
 				return fmt.Errorf("deepgram-tts: failed to connect: %w", err)

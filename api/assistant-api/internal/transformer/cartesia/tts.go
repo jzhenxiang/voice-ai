@@ -194,7 +194,7 @@ func (ct *cartesiaTTS) Transform(ctx context.Context, in internal_type.Packet) e
 	ct.mu.Unlock()
 
 	switch input := in.(type) {
-	case internal_type.InterruptionDetectedPacket:
+	case internal_type.TTSInterruptPacket:
 		ct.mu.Lock()
 		ct.contextId = ""
 		ct.ttsStartedAt = time.Time{}

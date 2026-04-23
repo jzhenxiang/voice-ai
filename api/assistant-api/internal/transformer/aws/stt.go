@@ -17,7 +17,6 @@ import (
 	"io"
 	"net/http"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	internal_type "github.com/rapidaai/api/assistant-api/internal/type"
@@ -36,7 +35,7 @@ type awsSTT struct {
 	contextId      string
 	sttConnectedAt time.Time
 	audioBuffer    bytes.Buffer
-	startedAtNano  atomic.Int64
+	startedAt      time.Time
 
 	logger   commons.Logger
 	onPacket func(pkt ...internal_type.Packet) error
@@ -90,10 +89,12 @@ func (st *awsSTT) Transform(ctx context.Context, in internal_type.Packet) error 
 		st.contextId = pkt.ContextID
 		st.mu.Unlock()
 		return nil
-	case internal_type.InterruptionDetectedPacket:
-		if pkt.Source == internal_type.InterruptionSourceVad {
-			st.startedAtNano.Store(time.Now().UnixNano())
+	case internal_type.STTInterruptPacket:
+		st.mu.Lock()
+		if st.startedAt.IsZero() {
+			st.startedAt = time.Now()
 		}
+		st.mu.Unlock()
 		return nil
 	case internal_type.UserAudioReceivedPacket:
 		st.mu.Lock()
@@ -111,7 +112,7 @@ func (st *awsSTT) Transform(ctx context.Context, in internal_type.Packet) error 
 	}
 }
 
-func (st *awsSTT) transcribe(audioData []byte, ctxId string) {
+func (st *awsSTT) transcribe(audioData []byte, ctxID string) {
 	region := st.GetRegion()
 	endpoint := fmt.Sprintf("https://transcribe.%s.amazonaws.com", region)
 
@@ -173,30 +174,32 @@ func (st *awsSTT) transcribe(audioData []byte, ctxId string) {
 		transcript = result.Results.Transcripts[0].Transcript
 	}
 
+	//
+	var latencyMs int64
 	if transcript != "" {
-		startedNano := st.startedAtNano.Swap(0)
-		if startedNano > 0 {
-			st.onPacket(internal_type.UserMessageMetricPacket{
-				ContextID: ctxId,
-				Metrics: []*protos.Metric{{
-					Name:  "stt_latency_ms",
-					Value: fmt.Sprintf("%d", (time.Now().UnixNano()-startedNano)/int64(time.Millisecond)),
-				}},
-			})
+		st.mu.Lock()
+		if !st.startedAt.IsZero() {
+			latencyMs = now.Sub(st.startedAt).Milliseconds()
+			st.startedAt = time.Time{}
 		}
+		st.mu.Unlock()
 
 		st.onPacket(
-			internal_type.InterruptionDetectedPacket{ContextID: ctxId, Source: "word"},
+			internal_type.InterruptionDetectedPacket{ContextID: ctxID, Source: "word"},
 			internal_type.SpeechToTextPacket{
-				ContextID: ctxId,
+				ContextID: ctxID,
 				Script:    transcript,
 				Interim:   false,
 			},
 			internal_type.ConversationEventPacket{
-				ContextID: ctxId,
+				ContextID: ctxID,
 				Name:      "stt",
 				Data:      map[string]string{"type": "completed"},
 				Time:      time.Now(),
+			},
+			internal_type.UserMessageMetricPacket{
+				ContextID: ctxID,
+				Metrics:   []*protos.Metric{{Name: "stt_latency_ms", Value: fmt.Sprintf("%d", latencyMs)}},
 			},
 		)
 	}

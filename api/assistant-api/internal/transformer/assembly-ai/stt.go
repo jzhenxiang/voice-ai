@@ -126,7 +126,6 @@ func (aai *assemblyaiSTT) readLoop(conn *websocket.Conn) {
 			aai.logger.Errorf("assembly-ai-stt: error unmarshalling transcript: %v", err)
 			continue
 		}
-
 		switch transcript.Type {
 		case "Turn":
 			if len(transcript.Words) == 0 {
@@ -225,7 +224,7 @@ func (aai *assemblyaiSTT) readLoop(conn *websocket.Conn) {
 			aai.onPacket(
 				internal_type.STTErrorPacket{
 					ContextID: aai.contextId,
-					Error:     fmt.Errorf("assembly-ai-stt: unhandled error message"),
+					Error:     fmt.Errorf("assembly-ai-stt: error from provider: %s (code %d)", transcript.Error, transcript.ErrorCode),
 					Type:      internal_type.STTNetworkTimeout,
 				},
 			)

@@ -15,6 +15,7 @@ import (
 
 	texttospeech "cloud.google.com/go/texttospeech/apiv1"
 	"cloud.google.com/go/texttospeech/apiv1/texttospeechpb"
+	google_internal "github.com/rapidaai/api/assistant-api/internal/transformer/google/internal"
 	internal_type "github.com/rapidaai/api/assistant-api/internal/type"
 	"github.com/rapidaai/pkg/commons"
 	type_enums "github.com/rapidaai/pkg/types/enums"
@@ -78,7 +79,7 @@ func NewGoogleTextToSpeech(ctx context.Context, logger commons.Logger, credentia
 		onPacket:     onPacket,
 		client:       client,
 		googleOption: googleOption,
-		normalizer:   NewGoogleNormalizer(logger, opts),
+		normalizer:   google_internal.NewGoogleNormalizer(logger, opts),
 	}, nil
 }
 

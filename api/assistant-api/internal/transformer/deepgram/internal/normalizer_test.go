@@ -4,11 +4,12 @@
 // Licensed under GPL-2.0 with Rapida Additional Terms.
 // See LICENSE.md or contact sales@rapida.ai for commercial usage.
 
-package internal_transformer_deepgram
+package deepgram_internal
 
 import (
 	"testing"
 
+	testutil "github.com/rapidaai/api/assistant-api/internal/transformer/internal/testutil"
 	"github.com/rapidaai/pkg/commons"
 	"github.com/rapidaai/pkg/utils"
 	"github.com/stretchr/testify/assert"
@@ -28,7 +29,7 @@ func newTestLogger(t *testing.T) commons.Logger {
 
 func newTestNormalizer(t *testing.T, opts utils.Option) *deepgramNormalizer {
 	t.Helper()
-	logger := newTestLogger(t)
+	logger := testutil.NewTestLogger()
 	normalizer := NewDeepgramNormalizer(logger, opts)
 	dn, ok := normalizer.(*deepgramNormalizer)
 	require.True(t, ok, "expected *deepgramNormalizer type")
@@ -68,7 +69,7 @@ func TestNewDeepgramNormalizer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			logger := newTestLogger(t)
+			logger := testutil.NewTestLogger()
 			normalizer := NewDeepgramNormalizer(logger, tt.opts)
 
 			require.NotNil(t, normalizer, "normalizer should not be nil")
