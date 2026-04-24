@@ -258,9 +258,13 @@ class ConversationDisconnection(_message.Message):
         DISCONNECTION_TYPE_UNSPECIFIED: _ClassVar[ConversationDisconnection.DisconnectionType]
         DISCONNECTION_TYPE_TOOL: _ClassVar[ConversationDisconnection.DisconnectionType]
         DISCONNECTION_TYPE_USER: _ClassVar[ConversationDisconnection.DisconnectionType]
+        DISCONNECTION_TYPE_IDLE_TIMEOUT: _ClassVar[ConversationDisconnection.DisconnectionType]
+        DISCONNECTION_TYPE_MAX_DURATION: _ClassVar[ConversationDisconnection.DisconnectionType]
     DISCONNECTION_TYPE_UNSPECIFIED: ConversationDisconnection.DisconnectionType
     DISCONNECTION_TYPE_TOOL: ConversationDisconnection.DisconnectionType
     DISCONNECTION_TYPE_USER: ConversationDisconnection.DisconnectionType
+    DISCONNECTION_TYPE_IDLE_TIMEOUT: ConversationDisconnection.DisconnectionType
+    DISCONNECTION_TYPE_MAX_DURATION: ConversationDisconnection.DisconnectionType
     TYPE_FIELD_NUMBER: _ClassVar[int]
     TIME_FIELD_NUMBER: _ClassVar[int]
     type: ConversationDisconnection.DisconnectionType
