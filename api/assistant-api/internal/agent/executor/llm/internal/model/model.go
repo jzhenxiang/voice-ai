@@ -249,9 +249,6 @@ func (e *modelAssistantExecutor) handleToolResult(ctx context.Context, communica
 }
 
 func (e *modelAssistantExecutor) handleInterruption() {
-	e.mu.Lock()
-	e.currentPacket = nil
-	e.mu.Unlock()
 	e.history.SupersedePending()
 }
 

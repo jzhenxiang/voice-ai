@@ -670,30 +670,51 @@ func (talking *genericRequestor) handleLLMDone(ctx context.Context, vl internal_
 func (talking *genericRequestor) handleErrorPacket(ctx context.Context, vl internal_type.ErrorPacket) {
 	switch vl.(type) {
 	case internal_type.LLMErrorPacket:
-		talking.OnPacket(ctx, internal_type.UserMessageMetricPacket{
-			ContextID: vl.ContextId(),
-			Metrics: []*protos.Metric{{
-				Name:        "llm_error",
-				Value:       vl.ErrMessage(),
-				Description: "An error occurred during LLM processing"}},
-		})
+		talking.OnPacket(ctx,
+			internal_type.UserMessageMetricPacket{
+				ContextID: vl.ContextId(),
+				Metrics: []*protos.Metric{{
+					Name:        "llm_error",
+					Value:       vl.ErrMessage(),
+					Description: "An error occurred during LLM processing"}},
+			},
+			internal_type.ConversationEventPacket{
+				ContextID: vl.ContextId(),
+				Name:      "llm",
+				Data:      map[string]string{"type": "error", "message": vl.ErrMessage()},
+				Time:      time.Now(),
+			})
 		talking.Transition(LLMGenerated)
 	case internal_type.STTErrorPacket:
-		talking.OnPacket(ctx, internal_type.UserMessageMetricPacket{
-			ContextID: vl.ContextId(),
-			Metrics: []*protos.Metric{{
-				Name:        "stt_error",
-				Value:       vl.ErrMessage(),
-				Description: "An error occurred during STT processing"}},
-		})
+		talking.OnPacket(ctx,
+			internal_type.UserMessageMetricPacket{
+				ContextID: vl.ContextId(),
+				Metrics: []*protos.Metric{{
+					Name:        "stt_error",
+					Value:       vl.ErrMessage(),
+					Description: "An error occurred during STT processing"}},
+			},
+			internal_type.ConversationEventPacket{
+				ContextID: vl.ContextId(),
+				Name:      "stt",
+				Data:      map[string]string{"type": "error", "message": vl.ErrMessage()},
+				Time:      time.Now(),
+			})
 	case internal_type.TTSErrorPacket:
-		talking.OnPacket(ctx, internal_type.UserMessageMetricPacket{
-			ContextID: vl.ContextId(),
-			Metrics: []*protos.Metric{{
-				Name:        "tts_error",
-				Value:       vl.ErrMessage(),
-				Description: "An error occurred during TTS processing"}},
-		})
+		talking.OnPacket(ctx,
+			internal_type.UserMessageMetricPacket{
+				ContextID: vl.ContextId(),
+				Metrics: []*protos.Metric{{
+					Name:        "tts_error",
+					Value:       vl.ErrMessage(),
+					Description: "An error occurred during TTS processing"}},
+			},
+			internal_type.ConversationEventPacket{
+				ContextID: vl.ContextId(),
+				Name:      "tts",
+				Data:      map[string]string{"type": "error", "message": vl.ErrMessage()},
+				Time:      time.Now(),
+			})
 
 	}
 	if !vl.IsRecoverable() {

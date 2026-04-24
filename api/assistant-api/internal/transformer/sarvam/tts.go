@@ -227,11 +227,12 @@ func (rt *sarvamTextToSpeech) handleServerError(conn *websocket.Conn, response s
 	}
 	rt.mu.Lock()
 	rt.connection = nil
+	ctxID := rt.contextId
 	rt.mu.Unlock()
-	rt.onPacket(internal_type.ConversationEventPacket{
-		Name: "tts",
-		Data: map[string]string{"type": "error", "message": msg},
-		Time: time.Now(),
+	rt.onPacket(internal_type.TTSErrorPacket{
+		ContextID: ctxID,
+		Error:     fmt.Errorf("sarvam-tts: failed : %v", msg),
+		Type:      internal_type.TTSInvalidInput,
 	})
 	conn.Close()
 }
