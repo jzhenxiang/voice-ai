@@ -125,11 +125,11 @@ func (d *Dispatcher) handleSessionEstablished(ctx context.Context, v sip_infra.S
 				d.onCallEnd(v.ID)
 			}
 
-			d.logger.Infow("Pipeline: CallEnded",
-				"call_id", v.ID,
-				"duration", fmt.Sprintf("%dms", time.Since(startTime).Milliseconds()),
-				"reason", reason,
-				"status", status)
+			d.OnPipeline(ctx, sip_infra.CallEndedPipeline{
+				ID:       v.ID,
+				Duration: time.Since(startTime),
+				Reason:   reason,
+			})
 		}()
 		if err := d.onCallStart(ctx, v.Session, setup, v.VaultCredential, v.Config, string(v.Direction)); err != nil {
 			reason = err.Error()
@@ -150,9 +150,11 @@ func (d *Dispatcher) handleSessionEstablished(ctx context.Context, v sip_infra.S
 					d.logger.Infow("Pipeline: bridge transfer",
 						"call_id", v.ID, "target", target, "status", transferStatus)
 					observer.EmitEvent(ctx, obs.ComponentTelephony, map[string]string{
-						obs.DataType:   obs.EventTransferRequested,
-						obs.DataTo:     target,
-						obs.DataReason: transferStatus,
+						obs.DataType:      obs.EventTransferRequested,
+						obs.DataProvider:  "sip",
+						obs.DataDirection: string(v.Direction),
+						obs.DataTo:        target,
+						obs.DataReason:    transferStatus,
 					})
 				}
 			}

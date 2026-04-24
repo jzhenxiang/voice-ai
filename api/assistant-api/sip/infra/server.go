@@ -634,14 +634,16 @@ func (s *Server) handleInvite(req *sip.Request, tx sip.ServerTransaction) {
 	}
 
 	// Create session with resolved tenant config and middleware state
+	auth, _ := resolvedExtra["auth"].(types.SimplePrinciple)
+	assistant, _ := resolvedExtra["assistant"].(*internal_assistant_entity.Assistant)
 	session, err := NewSession(s.ctx, &SessionConfig{
 		Config:          tenantConfig,
 		Direction:       CallDirectionInbound,
 		CallID:          callID,
 		Codec:           negotiatedCodec,
 		Logger:          s.logger,
-		Auth:            resolvedExtra["auth"].(types.SimplePrinciple),
-		Assistant:       resolvedExtra["assistant"].(*internal_assistant_entity.Assistant),
+		Auth:            auth,
+		Assistant:       assistant,
 		VaultCredential: vaultCredential,
 	})
 	if err != nil {
@@ -1242,8 +1244,8 @@ func (s *Server) handleNotify(req *sip.Request, tx sip.ServerTransaction) {
 }
 
 // handleRefer processes SIP REFER requests (RFC 3515).
-// Used for call transfer requests by all providers.
-// We decline transfers since the AI pipeline doesn't support mid-call transfer.
+// Inbound REFER (provider-initiated transfer) is declined. The platform supports
+// transfer via B2BUA bridge (INVITE-based), triggered by the LLM tool — not REFER.
 func (s *Server) handleRefer(req *sip.Request, tx sip.ServerTransaction) {
 	callID := req.CallID().Value()
 	referTo := ""
@@ -1437,6 +1439,7 @@ type MakeCallOptions struct {
 	Auth            types.SimplePrinciple
 	Assistant       *internal_assistant_entity.Assistant
 	ConversationID  uint64
+	ContextID       string
 	VaultCredential *protos.VaultCredential
 }
 
@@ -1462,6 +1465,7 @@ func (s *Server) MakeCall(ctx context.Context, cfg *Config, toURI, fromURI strin
 		Auth:            opts.Auth,
 		Assistant:       opts.Assistant,
 		ConversationID:  opts.ConversationID,
+		ContextID:       opts.ContextID,
 		VaultCredential: opts.VaultCredential,
 	})
 	if err != nil {
@@ -1581,6 +1585,8 @@ func (s *Server) handleOutboundDialog(session *Session, rtpHandler *RTPHandler, 
 		s.notifyError(session, err)
 		s.removeSession(callID)
 		rtpHandler.Stop()
+		// Call was never answered — no established dialog, so don't send BYE
+		session.ClearOnDisconnect()
 		session.End()
 		// Allow the transaction layer time to send ACK for non-2xx responses
 		// before terminating the dialog (prevents retransmission floods)
@@ -1786,7 +1792,7 @@ func (s *Server) prepareOutboundInvite(ctx context.Context, cfg *Config, toURI, 
 	}
 
 	rtpBindIP := s.listenConfig.GetBindAddress()
-	rtpHandler, err := NewRTPHandler(ctx, &RTPConfig{
+	rtpHandler, err := NewRTPHandler(context.Background(), &RTPConfig{
 		LocalIP:     rtpBindIP,
 		LocalPort:   rtpPort,
 		PayloadType: CodecPCMU.PayloadType,

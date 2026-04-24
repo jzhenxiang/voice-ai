@@ -137,7 +137,7 @@ func TestForwardBridgeAudio_PassthroughSameCodec(t *testing.T) {
 	dst := make(chan []byte, 10)
 	ctx, cancel := context.WithCancel(context.Background())
 
-	go srv.forwardBridgeAudio(ctx, src, dst, false, &CodecPCMU, &CodecPCMU)
+	go srv.forwardBridgeAudio(ctx, src, dst, false, &CodecPCMU, &CodecPCMU, nil)
 
 	for i := 0; i < 5; i++ {
 		src <- []byte{byte(i), byte(i + 1)}
@@ -162,7 +162,7 @@ func TestForwardBridgeAudio_TranscodesWhenNeeded(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go srv.forwardBridgeAudio(ctx, src, dst, true, &CodecPCMA, &CodecPCMU)
+	go srv.forwardBridgeAudio(ctx, src, dst, true, &CodecPCMA, &CodecPCMU, nil)
 
 	alaw := []byte{0xD5, 0xD5}
 	src <- alaw
@@ -186,7 +186,7 @@ func TestForwardBridgeAudio_ExitsOnContextCancel(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() {
-		srv.forwardBridgeAudio(ctx, src, dst, false, &CodecPCMU, &CodecPCMU)
+		srv.forwardBridgeAudio(ctx, src, dst, false, &CodecPCMU, &CodecPCMU, nil)
 		close(done)
 	}()
 
@@ -210,7 +210,7 @@ func TestForwardBridgeAudio_ExitsOnSrcClose(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() {
-		srv.forwardBridgeAudio(ctx, src, dst, false, &CodecPCMU, &CodecPCMU)
+		srv.forwardBridgeAudio(ctx, src, dst, false, &CodecPCMU, &CodecPCMU, nil)
 		close(done)
 	}()
 
@@ -232,7 +232,7 @@ func TestForwardBridgeAudio_DropsFrameWhenDstFull(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go srv.forwardBridgeAudio(ctx, src, dst, false, &CodecPCMU, &CodecPCMU)
+	go srv.forwardBridgeAudio(ctx, src, dst, false, &CodecPCMU, &CodecPCMU, nil)
 
 	// Fill dst
 	src <- []byte{0x01}
@@ -262,7 +262,7 @@ func TestBridgeTransfer_NilInboundRTP_EndsBothSessions(t *testing.T) {
 	inbound := newInboundTestSession(t) // no RTP handler
 	outbound, _ := newBridgeTestSession(t, CallDirectionOutbound, &CodecPCMU)
 
-	err := srv.BridgeTransfer(context.Background(), inbound, outbound)
+	_, err := srv.BridgeTransfer(context.Background(), inbound, outbound, nil)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrRTPNotInitialized)
 	assert.True(t, inbound.IsEnded())
@@ -276,11 +276,16 @@ func TestBridgeTransfer_NilOutboundRTP_EndsBothSessions(t *testing.T) {
 	inbound, _ := newBridgeTestSession(t, CallDirectionInbound, &CodecPCMU)
 	outbound := newInboundTestSession(t) // no RTP handler
 
-	err := srv.BridgeTransfer(context.Background(), inbound, outbound)
+	_, err := srv.BridgeTransfer(context.Background(), inbound, outbound, nil)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrRTPNotInitialized)
 	assert.True(t, inbound.IsEnded())
 	assert.True(t, outbound.IsEnded())
+}
+
+type bridgeResult struct {
+	reason BridgeEndReason
+	err    error
 }
 
 func TestBridgeTransfer_ContextCancellation(t *testing.T) {
@@ -291,22 +296,24 @@ func TestBridgeTransfer_ContextCancellation(t *testing.T) {
 	outbound, _ := newBridgeTestSession(t, CallDirectionOutbound, &CodecPCMU)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	done := make(chan error, 1)
+	done := make(chan bridgeResult, 1)
 	go func() {
-		done <- srv.BridgeTransfer(ctx, inbound, outbound)
+		r, err := srv.BridgeTransfer(ctx, inbound, outbound, nil)
+		done <- bridgeResult{r, err}
 	}()
 
 	time.Sleep(10 * time.Millisecond)
 	cancel()
 
 	select {
-	case err := <-done:
-		assert.NoError(t, err)
+	case res := <-done:
+		assert.NoError(t, res.err)
+		assert.Equal(t, BridgeEndContext, res.reason)
 	case <-time.After(1 * time.Second):
 		t.Fatal("BridgeTransfer did not exit after context cancel")
 	}
-	assert.True(t, inbound.IsEnded())
-	assert.True(t, outbound.IsEnded())
+	assert.False(t, inbound.IsEnded(), "BridgeTransfer must NOT end the inbound session")
+	assert.True(t, outbound.IsEnded(), "BridgeTransfer must end the outbound session")
 }
 
 func TestBridgeTransfer_InboundByeEndsBridge(t *testing.T) {
@@ -316,17 +323,19 @@ func TestBridgeTransfer_InboundByeEndsBridge(t *testing.T) {
 	inbound, _ := newBridgeTestSession(t, CallDirectionInbound, &CodecPCMU)
 	outbound, _ := newBridgeTestSession(t, CallDirectionOutbound, &CodecPCMU)
 
-	done := make(chan error, 1)
+	done := make(chan bridgeResult, 1)
 	go func() {
-		done <- srv.BridgeTransfer(context.Background(), inbound, outbound)
+		r, err := srv.BridgeTransfer(context.Background(), inbound, outbound, nil)
+		done <- bridgeResult{r, err}
 	}()
 
 	time.Sleep(10 * time.Millisecond)
 	inbound.NotifyBye()
 
 	select {
-	case err := <-done:
-		assert.NoError(t, err)
+	case res := <-done:
+		assert.NoError(t, res.err)
+		assert.Equal(t, BridgeEndInboundBye, res.reason)
 	case <-time.After(1 * time.Second):
 		t.Fatal("BridgeTransfer did not exit after inbound BYE")
 	}
@@ -340,21 +349,24 @@ func TestBridgeTransfer_OutboundByeEndsBridge(t *testing.T) {
 	inbound, _ := newBridgeTestSession(t, CallDirectionInbound, &CodecPCMU)
 	outbound, _ := newBridgeTestSession(t, CallDirectionOutbound, &CodecPCMU)
 
-	done := make(chan error, 1)
+	done := make(chan bridgeResult, 1)
 	go func() {
-		done <- srv.BridgeTransfer(context.Background(), inbound, outbound)
+		r, err := srv.BridgeTransfer(context.Background(), inbound, outbound, nil)
+		done <- bridgeResult{r, err}
 	}()
 
 	time.Sleep(10 * time.Millisecond)
 	outbound.NotifyBye()
 
 	select {
-	case err := <-done:
-		assert.NoError(t, err)
+	case res := <-done:
+		assert.NoError(t, res.err)
+		assert.Equal(t, BridgeEndOutboundBye, res.reason)
 	case <-time.After(1 * time.Second):
 		t.Fatal("BridgeTransfer did not exit after outbound BYE")
 	}
-	assert.True(t, inbound.IsEnded())
+	assert.False(t, inbound.IsEnded(), "BridgeTransfer must NOT end the inbound session")
+	assert.True(t, outbound.IsEnded(), "BridgeTransfer must end the outbound session")
 }
 
 func TestBridgeTransfer_SessionEndTerminatesBridge(t *testing.T) {
@@ -364,17 +376,19 @@ func TestBridgeTransfer_SessionEndTerminatesBridge(t *testing.T) {
 	inbound, _ := newBridgeTestSession(t, CallDirectionInbound, &CodecPCMU)
 	outbound, _ := newBridgeTestSession(t, CallDirectionOutbound, &CodecPCMU)
 
-	done := make(chan error, 1)
+	done := make(chan bridgeResult, 1)
 	go func() {
-		done <- srv.BridgeTransfer(context.Background(), inbound, outbound)
+		r, err := srv.BridgeTransfer(context.Background(), inbound, outbound, nil)
+		done <- bridgeResult{r, err}
 	}()
 
 	time.Sleep(10 * time.Millisecond)
 	inbound.End()
 
 	select {
-	case err := <-done:
-		assert.NoError(t, err)
+	case res := <-done:
+		assert.NoError(t, res.err)
+		assert.Equal(t, BridgeEndInboundBye, res.reason)
 	case <-time.After(1 * time.Second):
 		t.Fatal("BridgeTransfer did not exit after inbound End()")
 	}
@@ -389,21 +403,13 @@ func TestBridgeTransfer_AudioForwardsBidirectionally(t *testing.T) {
 	outbound, outRTP := newBridgeTestSession(t, CallDirectionOutbound, &CodecPCMU)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	done := make(chan error, 1)
+	done := make(chan bridgeResult, 1)
 	go func() {
-		done <- srv.BridgeTransfer(ctx, inbound, outbound)
+		r, err := srv.BridgeTransfer(ctx, inbound, outbound, nil)
+		done <- bridgeResult{r, err}
 	}()
 
-	// inbound → outbound
-	inRTP.audioInChan <- []byte{0x01, 0x02}
-	select {
-	case frame := <-outRTP.audioOutChan:
-		assert.Equal(t, []byte{0x01, 0x02}, frame)
-	case <-time.After(200 * time.Millisecond):
-		t.Fatal("audio not forwarded inbound→outbound")
-	}
-
-	// outbound → inbound
+	// outbound → inbound (inbound→outbound is handled by streamer's forwardIncomingAudio)
 	outRTP.audioInChan <- []byte{0x03, 0x04}
 	select {
 	case frame := <-inRTP.audioOutChan:
@@ -424,18 +430,19 @@ func TestBridgeTransfer_TranscodesAcrossCodecs(t *testing.T) {
 	outbound, outRTP := newBridgeTestSession(t, CallDirectionOutbound, &CodecPCMU)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	done := make(chan error, 1)
+	done := make(chan bridgeResult, 1)
 	go func() {
-		done <- srv.BridgeTransfer(ctx, inbound, outbound)
+		r, err := srv.BridgeTransfer(ctx, inbound, outbound, nil)
+		done <- bridgeResult{r, err}
 	}()
 
-	// A-law from inbound → µ-law on outbound
-	alaw := []byte{0xD5, 0xD5, 0xD5, 0xD5}
-	inRTP.audioInChan <- alaw
+	// µ-law from outbound → A-law on inbound
+	ulaw := []byte{0xFF, 0xFF, 0xFF, 0xFF}
+	outRTP.audioInChan <- ulaw
 	select {
-	case frame := <-outRTP.audioOutChan:
-		assert.Len(t, frame, len(alaw))
-		assert.NotEqual(t, alaw, frame, "should be transcoded PCMA→PCMU")
+	case frame := <-inRTP.audioOutChan:
+		assert.Len(t, frame, len(ulaw))
+		assert.NotEqual(t, ulaw, frame, "should be transcoded PCMU→PCMA")
 	case <-time.After(200 * time.Millisecond):
 		t.Fatal("transcoded audio not forwarded")
 	}
@@ -455,9 +462,135 @@ func TestBridgeTransfer_AlreadyEndedSessions(t *testing.T) {
 	outbound.End()
 
 	// RTP handler is nil after End() clears it
-	err := srv.BridgeTransfer(context.Background(), inbound, outbound)
+	_, err := srv.BridgeTransfer(context.Background(), inbound, outbound, nil)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrRTPNotInitialized)
+}
+
+// =============================================================================
+// BridgeTransfer — graceful transfer contract (outbound-only teardown)
+// =============================================================================
+
+func TestBridgeTransfer_OnlyEndsOutboundSession(t *testing.T) {
+	t.Parallel()
+	srv := bridgeTestServer()
+
+	inbound, _ := newBridgeTestSession(t, CallDirectionInbound, &CodecPCMU)
+	outbound, outRTP := newBridgeTestSession(t, CallDirectionOutbound, &CodecPCMU)
+
+	done := make(chan bridgeResult, 1)
+	go func() {
+		r, err := srv.BridgeTransfer(context.Background(), inbound, outbound, nil)
+		done <- bridgeResult{r, err}
+	}()
+
+	// Give the bridge goroutines time to start
+	time.Sleep(10 * time.Millisecond)
+
+	// Close outbound's AudioIn channel to make the forwardBridgeAudio goroutine exit.
+	// The bridge detects outbound session context done via outbound.End() triggered
+	// by the outbound session lifecycle, or we can trigger it via outbound.End().
+	// Here we simulate outbound ending (e.g., transfer target hangs up).
+	close(outRTP.audioInChan)
+	outbound.End()
+
+	select {
+	case res := <-done:
+		assert.NoError(t, res.err)
+		assert.Equal(t, BridgeEndOutboundBye, res.reason)
+	case <-time.After(1 * time.Second):
+		t.Fatal("BridgeTransfer did not exit after outbound end")
+	}
+
+	assert.True(t, outbound.IsEnded(), "outbound must be ended")
+	assert.False(t, inbound.IsEnded(), "inbound must NOT be ended — caller owns its lifecycle")
+}
+
+func TestBridgeTransfer_InboundBye_OnlyEndsOutbound(t *testing.T) {
+	t.Parallel()
+	srv := bridgeTestServer()
+
+	inbound, _ := newBridgeTestSession(t, CallDirectionInbound, &CodecPCMU)
+	outbound, _ := newBridgeTestSession(t, CallDirectionOutbound, &CodecPCMU)
+
+	done := make(chan bridgeResult, 1)
+	go func() {
+		r, err := srv.BridgeTransfer(context.Background(), inbound, outbound, nil)
+		done <- bridgeResult{r, err}
+	}()
+
+	time.Sleep(10 * time.Millisecond)
+	inbound.NotifyBye()
+
+	select {
+	case res := <-done:
+		assert.NoError(t, res.err)
+		assert.Equal(t, BridgeEndInboundBye, res.reason)
+	case <-time.After(1 * time.Second):
+		t.Fatal("BridgeTransfer did not exit after inbound BYE")
+	}
+
+	assert.True(t, outbound.IsEnded(), "outbound must be ended by BridgeTransfer")
+	assert.False(t, inbound.IsEnded(), "inbound must NOT be ended — NotifyBye is not End()")
+}
+
+func TestForwardBridgeAudio_Passthrough_10Frames(t *testing.T) {
+	t.Parallel()
+	srv := bridgeTestServer()
+
+	src := make(chan []byte, 20)
+	dst := make(chan []byte, 20)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go srv.forwardBridgeAudio(ctx, src, dst, false, &CodecPCMU, &CodecPCMU, nil)
+
+	const frameCount = 10
+	for i := 0; i < frameCount; i++ {
+		src <- []byte{byte(i), byte(i * 2)}
+	}
+
+	for i := 0; i < frameCount; i++ {
+		select {
+		case frame := <-dst:
+			assert.Equal(t, []byte{byte(i), byte(i * 2)}, frame, "frame %d mismatch", i)
+		case <-time.After(200 * time.Millisecond):
+			t.Fatalf("timeout waiting for frame %d of %d", i, frameCount)
+		}
+	}
+}
+
+func TestForwardBridgeAudio_ContextCancel_NoHang(t *testing.T) {
+	t.Parallel()
+	srv := bridgeTestServer()
+
+	src := make(chan []byte) // unbuffered — blocks if forwardBridgeAudio tries to read
+	dst := make(chan []byte, 10)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	done := make(chan struct{})
+	go func() {
+		srv.forwardBridgeAudio(ctx, src, dst, false, &CodecPCMU, &CodecPCMU, nil)
+		close(done)
+	}()
+
+	// Cancel immediately — forwardBridgeAudio must not block
+	cancel()
+
+	select {
+	case <-done:
+		// success
+	case <-time.After(200 * time.Millisecond):
+		t.Fatal("forwardBridgeAudio did not exit promptly after context cancel")
+	}
+
+	// dst should be empty — no frames were sent
+	select {
+	case <-dst:
+		t.Fatal("unexpected frame on dst after cancel")
+	default:
+		// expected
+	}
 }
 
 // =============================================================================

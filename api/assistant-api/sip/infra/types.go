@@ -7,7 +7,6 @@
 package sip_infra
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,8 +15,6 @@ import (
 	"strings"
 	"time"
 
-	internal_type "github.com/rapidaai/api/assistant-api/internal/type"
-	"github.com/rapidaai/pkg/types"
 	"github.com/rapidaai/protos"
 )
 
@@ -196,13 +193,15 @@ func (c *Config) GetListenAddr() string {
 type CallState string
 
 const (
-	CallStateInitializing CallState = "initializing"
-	CallStateRinging      CallState = "ringing"
-	CallStateConnected    CallState = "connected"
-	CallStateOnHold       CallState = "on_hold"
-	CallStateEnding       CallState = "ending"
-	CallStateEnded        CallState = "ended"
-	CallStateFailed       CallState = "failed"
+	CallStateInitializing    CallState = "initializing"
+	CallStateRinging         CallState = "ringing"
+	CallStateConnected       CallState = "connected"
+	CallStateOnHold          CallState = "on_hold"
+	CallStateTransferring    CallState = "transferring"
+	CallStateBridgeConnected CallState = "bridge_connected"
+	CallStateEnding          CallState = "ending"
+	CallStateEnded           CallState = "ended"
+	CallStateFailed          CallState = "failed"
 )
 
 // String returns the string representation of the call state
@@ -217,7 +216,7 @@ func (s CallState) IsTerminal() bool {
 
 // IsActive returns true if the call is in an active state
 func (s CallState) IsActive() bool {
-	return s == CallStateConnected || s == CallStateRinging || s == CallStateOnHold
+	return s == CallStateConnected || s == CallStateRinging || s == CallStateOnHold || s == CallStateTransferring || s == CallStateBridgeConnected
 }
 
 // CallDirection represents the direction of the call
@@ -293,6 +292,14 @@ const (
 	// the outcome. Values: "completed" or "failed". Read by media.go to emit
 	// the correct transfer event.
 	MetadataBridgeTransferStatus = "bridge_transfer_status"
+
+	// MetadataBridgeTransferDuration holds the bridge duration as a string
+	// (time.Duration.String()). Set after BridgeTransfer returns.
+	MetadataBridgeTransferDuration = "bridge_transfer_duration"
+
+	// MetadataBridgeTransferOutboundCallID holds the SIP Call-ID of the
+	// outbound (B-leg) call created for the transfer.
+	MetadataBridgeTransferOutboundCallID = "bridge_transfer_outbound_call_id"
 )
 
 // Event represents events from SIP stack
@@ -327,17 +334,6 @@ type RTPStats struct {
 	BytesReceived   uint64        `json:"bytes_received"`
 	PacketsLost     uint64        `json:"packets_lost"`
 	Jitter          time.Duration `json:"jitter"`
-}
-
-// SIPSession represents an active SIP call session (used by SIP manager)
-type SIPSession struct {
-	CallID      string
-	AssistantID uint64
-	TenantID    string
-	Auth        types.SimplePrinciple
-	Config      *Config
-	Streamer    internal_type.Streamer
-	Cancel      context.CancelFunc
 }
 
 // ParseConfigFromVault extracts SIP provider credentials from a vault credential.
@@ -409,20 +405,6 @@ func parsePortValue(v any) int {
 		}
 	}
 	return 0
-}
-
-// NormalizeDID normalizes a phone number to a canonical form for deduplication.
-// Numbers longer than 5 digits get a "+" prefix (E.164); shorter ones (extensions) are left as-is.
-func NormalizeDID(did string) string {
-	did = strings.TrimSpace(did)
-	if did == "" {
-		return did
-	}
-	stripped := strings.TrimPrefix(did, "+")
-	if len(stripped) > 5 {
-		return "+" + stripped
-	}
-	return stripped
 }
 
 // ExtractDIDFromURI extracts the user part from a SIP URI as a phone number (DID).

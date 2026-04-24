@@ -10,13 +10,11 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/emiago/sipgo"
-	"github.com/emiago/sipgo/sip"
 	"github.com/google/uuid"
 	internal_assistant_entity "github.com/rapidaai/api/assistant-api/internal/entity/assistants"
 	"github.com/rapidaai/pkg/commons"
@@ -40,6 +38,7 @@ type SessionConfig struct {
 	Auth            types.SimplePrinciple                // Authentication principal
 	Assistant       *internal_assistant_entity.Assistant // Assistant entity
 	ConversationID  uint64                               // Conversation ID (outbound: set by channel pipeline)
+	ContextID       string                               // Call context ID (outbound: set by channel pipeline)
 	VaultCredential *protos.VaultCredential              // Vault-resolved SIP provider credential
 }
 
@@ -73,6 +72,7 @@ type Session struct {
 	auth            types.SimplePrinciple                // Authentication principal
 	assistant       *internal_assistant_entity.Assistant // Assistant entity
 	conversationID  uint64                               // Conversation ID
+	contextID       string                               // Call context ID (outbound)
 	vaultCredential *protos.VaultCredential              // Vault-resolved SIP provider credential
 
 	// byeReceived is closed when a SIP BYE is received for this session.
@@ -147,6 +147,7 @@ func NewSession(ctx context.Context, cfg *SessionConfig) (*Session, error) {
 		auth:            cfg.Auth,
 		assistant:       cfg.Assistant,
 		conversationID:  cfg.ConversationID,
+		contextID:       cfg.ContextID,
 		vaultCredential: cfg.VaultCredential,
 		byeReceived:     make(chan struct{}),
 	}
@@ -229,11 +230,12 @@ func (s *Session) isValidTransition(from, to CallState) bool {
 
 	// Define valid transitions
 	validTransitions := map[CallState][]CallState{
-		CallStateInitializing: {CallStateRinging, CallStateConnected},
-		CallStateRinging:      {CallStateConnected, CallStateEnding},
-		CallStateConnected:    {CallStateOnHold, CallStateEnding},
-		CallStateOnHold:       {CallStateConnected, CallStateEnding},
-		CallStateEnding:       {CallStateEnded},
+		CallStateInitializing:    {CallStateRinging, CallStateConnected},
+		CallStateRinging:         {CallStateConnected, CallStateEnding},
+		CallStateConnected:       {CallStateOnHold, CallStateTransferring, CallStateEnding},
+		CallStateOnHold:          {CallStateConnected, CallStateEnding},
+		CallStateTransferring:    {CallStateConnected, CallStateBridgeConnected, CallStateEnding},
+		CallStateBridgeConnected: {CallStateEnding},
 	}
 
 	allowed, exists := validTransitions[from]
@@ -411,51 +413,6 @@ func (s *Session) SetOnDisconnect(fn func(session *Session)) {
 	s.onDisconnect = fn
 }
 
-// SendRefer sends a SIP REFER to transfer the call to another target.
-// The target can be a phone number (+15551234567) or SIP URI (sip:user@domain).
-// Uses the dialog session (client or server) to send an in-dialog REFER.
-func (s *Session) SendRefer(target string) error {
-	s.mu.RLock()
-	logger := s.logger
-	callID := s.info.CallID
-	s.mu.RUnlock()
-
-	if logger != nil {
-		logger.Infow("Sending SIP REFER", "call_id", callID, "refer_to", target)
-	}
-
-	// Build Refer-To URI
-	referTo := target
-	if !strings.HasPrefix(referTo, "sip:") && !strings.HasPrefix(referTo, "sips:") {
-		referTo = "sip:" + strings.TrimPrefix(target, "+") + "@" + s.config.Server
-	}
-
-	// Try client dialog (outbound calls) first, then server dialog (inbound)
-	if ds := s.GetDialogClientSession(); ds != nil {
-		req := sip.NewRequest(sip.REFER, ds.InviteRequest.Recipient)
-		req.AppendHeader(sip.NewHeader("Refer-To", "<"+referTo+">"))
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if _, err := ds.Do(ctx, req); err != nil {
-			return fmt.Errorf("REFER via client dialog failed: %w", err)
-		}
-		return nil
-	}
-
-	if ds := s.GetDialogServerSession(); ds != nil {
-		req := sip.NewRequest(sip.REFER, sip.Uri{Host: s.config.Server, Port: s.config.Port})
-		req.AppendHeader(sip.NewHeader("Refer-To", "<"+referTo+">"))
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if _, err := ds.Do(ctx, req); err != nil {
-			return fmt.Errorf("REFER via server dialog failed: %w", err)
-		}
-		return nil
-	}
-
-	return fmt.Errorf("no dialog session available for REFER")
-}
-
 // ClearOnDisconnect removes the disconnect callback without invoking it.
 // Used when the remote party initiated teardown (BYE/CANCEL) so session.End()
 // does not send BYE back to a party that already knows the call is over.
@@ -512,6 +469,12 @@ func (s *Session) GetConversationID() uint64 {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.conversationID
+}
+
+func (s *Session) GetContextID() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.contextID
 }
 
 // SetConversationID sets the conversation ID for this session.

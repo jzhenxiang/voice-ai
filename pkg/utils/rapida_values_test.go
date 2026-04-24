@@ -118,7 +118,7 @@ func TestToUInt64Any(t *testing.T) {
 	}
 }
 
-// TestInterfaceMapRoundTrip reproduces the exact path that DirectivePacket
+// TestInterfaceMapRoundTrip reproduces the exact path that tool call
 // arguments take: map[string]interface{} → InterfaceMapToAnyMap → wire →
 // AnyMapToInterfaceMap → type-assert string. This is the transfer_call flow.
 func TestInterfaceMapRoundTrip(t *testing.T) {
