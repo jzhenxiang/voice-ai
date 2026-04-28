@@ -20,9 +20,11 @@ func main() {
 	}
 
 	// Set up a root context that is cancelled on OS interrupt signals
+	// Also handles SIGINT (Ctrl+C) for easier local development
 	ctx, cancel := signal.NotifyContext(context.Background(),
 		os.Interrupt,
 		syscall.SIGTERM,
+		syscall.SIGINT,
 	)
 	defer cancel()
 
