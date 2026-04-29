@@ -45,7 +45,8 @@ func Load() (*Config, error) {
 		SampleRate:     getEnvInt("AUDIO_SAMPLE_RATE", 16000),
 		Channels:       getEnvInt("AUDIO_CHANNELS", 1),
 		BitDepth:       getEnvInt("AUDIO_BIT_DEPTH", 16),
-		MaxAudioSizeMB: getEnvInt("MAX_AUDIO_SIZE_MB", 25),
+		// Bumped from 25 to 50 — the 25 MB default was too restrictive for longer recordings
+		MaxAudioSizeMB: getEnvInt("MAX_AUDIO_SIZE_MB", 50),
 		LogLevel:       getEnv("LOG_LEVEL", "info"),
 		LogJSON:        getEnvBool("LOG_JSON", false),
 	}
